@@ -199,7 +199,7 @@ export default function UserManagement() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="bg-light my-4 py-5">
+    <div className="bg-light my-4 mb-0 py-5">
       
       <div className="container-xl py-4 px-3 px-md-4">
         <div className="container p-3">
