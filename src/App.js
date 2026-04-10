@@ -10,6 +10,7 @@ import LibraryHome from './components/LibraryHome';
 import UserManagement from './components/admin/UserManagement';
 import BorrowingLog from "./components/admin/BorrowingLog";
 import LibraryDashboard from  "./components/LibraryDashboard"
+import Catalog from "./components/Catalog";
 
 const router = createBrowserRouter([
   {
@@ -26,7 +27,8 @@ const router = createBrowserRouter([
           { path: "admin/BooksM", element: <BooksM /> },
           { path: "admin/BorrowingLog", element: <BorrowingLog /> },
           { path: "admin/UserManagement", element: <UserManagement /> },
-          { path: "my-borrowed-books", element: <LibraryDashboard /> }
+          { path: "my-borrowed-books", element: <LibraryDashboard /> } ,
+          { path: "catalog", element: <Catalog /> }
         ],
       },
     ],
