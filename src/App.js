@@ -9,6 +9,7 @@ import LayoutPage from './components/LayoutPage';
 import LibraryHome from './components/LibraryHome';
 import MyBorrowedBooks from "./components/MyBorrowedBooks";
 import BorrowingLog from "./components/admin/BorrowingLog";
+import UserManagement from './components/admin/UserManagement';
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
           { path: "my-borrowed-books", element: <MyBorrowedBooks /> },
           { path: "admin/BooksM", element: <BooksM /> },
           { path: "admin/BorrowingLog", element: <BorrowingLog /> },
+          { path: "admin/UserManagement", element: <UserManagement /> }
         ],
       },
     ],

@@ -82,7 +82,7 @@ function Navbar() {
               </>
             )}
 
-            <NavLink
+            {/* <NavLink
               className="nav-link m-1 text-white hover rounded-5 px-4"
               to="/books"
               onClick={() => setIsopen(false)}
@@ -96,7 +96,7 @@ function Navbar() {
               onClick={() => setIsopen(false)}
             >
               About
-            </NavLink>
+            </NavLink> */}
 
             {role === "admin" && (
               <>
@@ -114,8 +114,16 @@ function Navbar() {
                 >
                   Borrowing Log
                 </NavLink>
+                <NavLink
+                  className="nav-link m-1 text-white hover rounded-5 px-4"
+                  to="/admin/UserManagement"
+                  onClick={() => setIsopen(false)}
+                >
+                  User Management
+                </NavLink>
               </>
             )}
+          
 
             <Link className="px-4 my-2 d-md-none" to="/user">
               <span className="rounded-circle border p-1 hover-bg">
