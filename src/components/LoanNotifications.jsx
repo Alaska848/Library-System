@@ -1,116 +1,186 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import Swal from "sweetalert2";
 
-function browserNotify(title, body) {
-  if (typeof Notification === "undefined") return;
-  if (Notification.permission === "granted") {
-    try {
-      new Notification(title, { body, icon: "/favicon.ico" });
-    } catch {
-      /* ignore */
-    }
+/** Prefer explicit uid; fallback when React state lags behind Firebase auth */
+function resolveNotificationUid(uid) {
+  return uid ?? auth.currentUser?.uid ?? null;
+}
+
+function notificationsKey(uid) {
+  return `lib_notifications_${uid}`;
+}
+
+function notifiedKey(uid) {
+  return `ln_notified_${uid}`;
+}
+
+function getNotified(uid) {
+  if (!uid) return new Set();
+  try {
+    return new Set(JSON.parse(localStorage.getItem(notifiedKey(uid)) || "[]"));
+  } catch {
+    return new Set();
   }
 }
 
-/**
- * For students only: listens to their loans and shows accept/reject alerts + optional browser notification.
- */
+function markNotified(uid, id) {
+  if (!uid) return;
+  const s = getNotified(uid);
+  s.add(id);
+  localStorage.setItem(notifiedKey(uid), JSON.stringify([...s]));
+}
+
+export function addNotification(notification, uid) {
+  if (!uid) return;
+  const key = notificationsKey(uid);
+  const existing = JSON.parse(localStorage.getItem(key) || "[]");
+  const newNotif = {
+    ...notification,
+    userId: uid,
+    id: Date.now(),
+    timestamp: Date.now(),
+    read: false,
+  };
+  existing.unshift(newNotif);
+  localStorage.setItem(key, JSON.stringify(existing.slice(0, 20)));
+  window.dispatchEvent(new Event("notificationsUpdated"));
+
+  window.dispatchEvent(
+    new CustomEvent("newToastNotification", { detail: newNotif }),
+  );
+}
+
+export function getNotifications(uid) {
+  const id = resolveNotificationUid(uid);
+  if (!id) return [];
+  try {
+    return JSON.parse(localStorage.getItem(notificationsKey(id)) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+export function markAllRead(uid) {
+  const id = resolveNotificationUid(uid);
+  if (!id) return;
+  const key = notificationsKey(id);
+  const list = getNotifications(id).map((n) => ({ ...n, read: true }));
+  localStorage.setItem(key, JSON.stringify(list));
+  window.dispatchEvent(new Event("notificationsUpdated"));
+}
+
+export function clearNotifications(uid) {
+  const id = resolveNotificationUid(uid);
+  if (!id) return;
+  localStorage.setItem(notificationsKey(id), JSON.stringify([]));
+  window.dispatchEvent(new Event("notificationsUpdated"));
+}
+
+export function removeNotification(id, uid) {
+  const idResolved = resolveNotificationUid(uid);
+  if (!idResolved) return;
+  const key = notificationsKey(idResolved);
+  const list = getNotifications(idResolved).filter((n) => n.id !== id);
+  localStorage.setItem(key, JSON.stringify(list));
+  window.dispatchEvent(new Event("notificationsUpdated"));
+}
+
 export default function LoanNotifications() {
-  const navigate = useNavigate();
-  const prevStatus = useRef(new Map());
-  const initialized = useRef(false);
   const unsubLoanRef = useRef(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    let unsubAuth = () => {};
-
-    unsubAuth = onAuthStateChanged(auth, (user) => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
       unsubLoanRef.current?.();
       unsubLoanRef.current = null;
-      initialized.current = false;
-      prevStatus.current = new Map();
+      initializedRef.current = false;
 
-      if (!user || localStorage.getItem("role") !== "user") {
-        return;
-      }
+      if (!user || localStorage.getItem("role") !== "user") return;
 
-      const q = query(
-        collection(db, "loans"),
-        where("userId", "==", user.uid),
-      );
+      const q = query(collection(db, "loans"), where("userId", "==", user.uid));
 
       unsubLoanRef.current = onSnapshot(
         q,
         (snap) => {
-          if (!initialized.current) {
+          const uid = user.uid;
+          const notified = getNotified(uid);
+
+          if (!initializedRef.current) {
+            initializedRef.current = true;
+
             snap.docs.forEach((d) => {
-              prevStatus.current.set(d.id, d.data().status);
+              const data = d.data();
+              const id = d.id;
+              const status = data.status;
+              const book = data.book || "the book";
+
+              if (status === "Active" && !notified.has(`accept_${id}`)) {
+                markNotified(uid, `accept_${id}`);
+                addNotification(
+                  {
+                    type: "accept",
+                    book,
+                    message: `Your request for "${book}" is approved.`,
+                  },
+                  uid,
+                );
+              } else if (
+                status === "Rejected" &&
+                !notified.has(`reject_${id}`)
+              ) {
+                markNotified(uid, `reject_${id}`);
+                addNotification(
+                  {
+                    type: "reject",
+                    book,
+                    message: `Your request for "${book}" was denied.`,
+                  },
+                  uid,
+                );
+              }
             });
-            initialized.current = true;
+
             return;
           }
 
           snap.docChanges().forEach((change) => {
+            if (change.type !== "modified") return;
+
             const id = change.doc.id;
             const data = change.doc.data();
-            const next = data.status;
+            const status = data.status;
+            const book = data.book || "the book";
+            const notifiedNow = getNotified(uid);
 
-            if (change.type === "added") {
-              prevStatus.current.set(id, next);
-              return;
-            }
-
-            if (change.type === "removed") {
-              prevStatus.current.delete(id);
-              return;
-            }
-
-            if (change.type === "modified") {
-              const prev = prevStatus.current.get(id);
-              const bookTitle = data.book || "الكتاب";
-
-              if (prev === "Pending" && next === "Active") {
-                browserNotify(
-                  "تم قبول طلب الاستعارة",
-                  `تمت الموافقة على: ${bookTitle}`,
-                );
-                Swal.fire({
-                  title: "تم القبول",
-                  html: `تمت الموافقة على طلبك لاستعارة: <strong>${bookTitle}</strong>. يمكنك متابعة الإعارة من صفحة كتبي المستعارة.`,
-                  icon: "success",
-                  confirmButtonText: "كتبي المستعارة",
-                  confirmButtonColor: "#633a19",
-                  showCancelButton: true,
-                  cancelButtonText: "البقاء هنا",
-                }).then((r) => {
-                  if (r.isConfirmed) navigate("/my-borrowed-books");
-                });
-              } else if (prev === "Pending" && next === "Rejected") {
-                browserNotify("تم رفض الطلب", bookTitle);
-                Swal.fire({
-                  title: "تم الرفض",
-                  html: `لم تُقبل طلب الاستعارة لـ <strong>${bookTitle}</strong>. يمكنك المحاولة مرة أخرى لاحقًا أو التواصل مع إدارة المكتبة.`,
-                  icon: "info",
-                  confirmButtonColor: "#633a19",
-                });
-              }
-
-              prevStatus.current.set(id, next);
+            if (status === "Active" && !notifiedNow.has(`accept_${id}`)) {
+              markNotified(uid, `accept_${id}`);
+              addNotification(
+                {
+                  type: "accept",
+                  book,
+                  message: `Your request for "${book}" is approved.`,
+                },
+                uid,
+              );
+            } else if (
+              status === "Rejected" &&
+              !notifiedNow.has(`reject_${id}`)
+            ) {
+              markNotified(uid, `reject_${id}`);
+              addNotification(
+                {
+                  type: "reject",
+                  book,
+                  message: `Your request for "${book}" was denied.`,
+                },
+                uid,
+              );
             }
           });
         },
-        (err) => {
-          console.error("loans listener (user):", err);
-        },
+        (err) => console.error("LoanNotifications:", err),
       );
     });
 
@@ -118,13 +188,6 @@ export default function LoanNotifications() {
       unsubLoanRef.current?.();
       unsubAuth();
     };
-  }, [navigate]);
-
-  useEffect(() => {
-    if (typeof Notification === "undefined") return;
-    if (Notification.permission === "default") {
-      Notification.requestPermission().catch(() => {});
-    }
   }, []);
 
   return null;

@@ -17,26 +17,35 @@ function Login() {
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
 
-      const userRef = doc(db, "students", cred.user.uid);
-      const userSnap = await getDoc(userRef);
-
       const adminRef = doc(db, "admins", cred.user.uid);
       const adminSnap = await getDoc(adminRef);
 
-      console.log(cred.user);
-      console.log("UID:", cred.user.uid);
-      console.log("admin exists:", adminSnap.exists());
-      console.log("user exists:", userSnap.exists());
-
-    
       if (adminSnap.exists()) {
         localStorage.setItem("role", "admin");
         navigate("/admin/BooksM");
-      } else {
-        localStorage.setItem("role", "user");
-        navigate("/home");
+        return;
       }
 
+      const studentRef = doc(db, "students", cred.user.uid);
+      const studentSnap = await getDoc(studentRef);
+
+      if (studentSnap.exists()) {
+        localStorage.setItem("role", "user");
+        navigate("/home");
+        return;
+      }
+
+      const doctorRef = doc(db, "doctors", cred.user.uid);
+      const doctorSnap = await getDoc(doctorRef);
+
+      if (doctorSnap.exists()) {
+        localStorage.setItem("role", "user");
+        navigate("/home");
+        return;
+      }
+
+      localStorage.setItem("role", "user");
+      navigate("/home");
     } catch (error) {
       console.log(error.code, error.message);
 
@@ -60,9 +69,7 @@ function Login() {
                 <i className="fa-solid fa-graduation-cap fs-2 brown"></i>
               </div>
 
-              <h3 className="darkorange fw-bolder px-4 mt-4">
-                Welcome Back
-              </h3>
+              <h3 className="darkorange fw-bolder px-4 mt-4">Welcome Back</h3>
 
               <p className="px-4">
                 Access your digital collection and resources
@@ -70,7 +77,6 @@ function Login() {
             </div>
 
             <form onSubmit={handleLogin} className="row g-3 mb-4 px-4">
-
               <div className="col-md-12 mb-3">
                 <label htmlFor="Email" className="form-label">
                   Institutional Email
@@ -90,7 +96,6 @@ function Login() {
               </div>
 
               <div className="col-md-12 mb-4 text-end position-relative">
-
                 <label
                   htmlFor="password"
                   className="form-label w-100 text-start"
@@ -128,20 +133,16 @@ function Login() {
                 >
                   Forgot password?
                 </Link>
-
               </div>
 
               <div className="col-12 mx-auto d-flex justify-content-center text-center">
-
                 <button
                   type="submit"
                   className="text-decoration-none p-2 py-3 rounded-4 border-0 mb-2 text-nowrap text-white fw-bold w-100 bg-brown shadow hover"
                 >
                   Sign In to Library
                 </button>
-
               </div>
-
             </form>
 
             <div className="border-top m-4 p-3 text-center">
@@ -153,7 +154,6 @@ function Login() {
                 Create an account
               </Link>
             </div>
-
           </div>
         </div>
       </div>
