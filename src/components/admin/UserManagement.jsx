@@ -3,7 +3,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 import { db } from "../firebase"; 
 
-
 import { 
   collection, 
   onSnapshot, 
@@ -28,19 +27,29 @@ const ROLES = [
   "Admin",
 ];
 
-const TABS       = ["All", "Students", "Faculty Members", "Admins"];
-const PER_PAGE   = 6;
+const TABS = ["All", "Students", "Faculty Members", "Admins"];
+const PER_PAGE = 6;
 const EMPTY_FORM = { name: "", email: "", dept: "", role: "", status: "Active", books: 0 };
 
 function getInitials(name) {
-  return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+  if (!name || typeof name !== 'string') return "??";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
 }
 
 function getUserCategory(user) {
-  const r = user.role.toLowerCase();
+  if (!user || !user.role) return "Other";
+  const r = user.role.toLowerCase(); 
+  
   if (r.includes("admin")) return "Admin";
-  if (r.includes("staff")) return "Faculty";
-  return "Student";
+  if (r.includes("staff") || r.includes("faculty")) return "Faculty";
+  if (r.includes("student")) return "Student";
+  
+  return "Other"; 
 }
 
 const AVATAR_COLORS = [
@@ -67,14 +76,14 @@ function StatCard({ icon, label, value, badge, badgeColor }) {
           )}
         </div>
         <p className="text-muted small mb-1">{label}</p>
-        <h4 className="fw-bold mb-0">{value.toLocaleString()}</h4>
+        <h4 className="fw-bold mb-0">{(value || 0).toLocaleString()}</h4>
       </div>
     </div>
   );
 }
 
 function UserAvatar({ name, userId }) {
-  const colorIndex = typeof userId === 'string' ? userId.length : userId;
+  const colorIndex = typeof userId === 'string' ? userId.length : 0;
   const { bg, color } = AVATAR_COLORS[colorIndex % AVATAR_COLORS.length];
   return (
     <div
@@ -95,54 +104,66 @@ function StatusBadge({ status }) {
 }
 
 export default function UserManagement() {
-  const [users,     setUsers]     = useState([]);
+  const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState("All");
-  const [search,    setSearch]    = useState("");
-  const [page,      setPage]      = useState(1);
-  const [form,      setForm]      = useState(EMPTY_FORM);
-  const [errors,    setErrors]    = useState({});
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
+  const [isOpen, setIsOpen] = useState(false);
 
-  
+  // جلب البيانات من كولكشن الطلاب والأدمنز معاً
   useEffect(() => {
-    const colRef = collection(db, "users");
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const usersData = snapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-      }));
-      setUsers(usersData);
+    const collectionsData = { students: [], admins: [] };
+
+    const syncUsers = () => {
+      setUsers([...collectionsData.students, ...collectionsData.admins]);
+    };
+
+    const unsubStudents = onSnapshot(collection(db, "students"), (snapshot) => {
+      collectionsData.students = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      syncUsers();
     });
-    return () => unsubscribe();
+
+    const unsubAdmins = onSnapshot(collection(db, "admins"), (snapshot) => {
+      collectionsData.admins = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      syncUsers();
+    });
+
+    return () => {
+      unsubStudents();
+      unsubAdmins();
+    };
   }, []);
 
-  const stats = {
-    total:     users.length,
-    students:  users.filter((u) => getUserCategory(u) === "Student").length,
-    faculty:   users.filter((u) => getUserCategory(u) === "Faculty").length,
+  const stats = useMemo(() => ({
+    total: users.length,
+    students: users.filter((u) => getUserCategory(u) === "Student").length,
+    faculty: users.filter((u) => getUserCategory(u) === "Faculty").length,
     suspended: users.filter((u) => u.status === "Suspended").length,
-  };
+  }), [users]);
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const tabMatch =
         activeTab === "All" ||
-        (activeTab === "Students"        && getUserCategory(u) === "Student") ||
+        (activeTab === "Students" && getUserCategory(u) === "Student") ||
         (activeTab === "Faculty Members" && getUserCategory(u) === "Faculty") ||
-        (activeTab === "Admins"          && getUserCategory(u) === "Admin");
+        (activeTab === "Admins" && getUserCategory(u) === "Admin");
 
       const q = search.toLowerCase();
       const searchMatch =
         !q ||
-        u.name.toLowerCase().includes(q)  ||
-        u.email.toLowerCase().includes(q) ||
-        u.dept.toLowerCase().includes(q);
+        (u.name?.toLowerCase().includes(q)) ||
+        (u.email?.toLowerCase().includes(q)) ||
+        (u.dept?.toLowerCase().includes(q));
 
       return tabMatch && searchMatch;
     });
   }, [users, activeTab, search]);
 
-  const totalPages   = Math.max(1, Math.ceil(filteredUsers.length / PER_PAGE));
-  const currentPage  = Math.min(page, totalPages);
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
   const visibleUsers = filteredUsers.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   function handleFormChange(field, value) {
@@ -152,18 +173,22 @@ export default function UserManagement() {
 
   function validateForm() {
     const newErrors = {};
-    if (!form.name.trim()) newErrors.name  = true;
+    if (!form.name.trim()) newErrors.name = true;
     if (!form.email.trim()) newErrors.email = true;
-    if (!form.dept)         newErrors.dept  = true;
-    if (!form.role)         newErrors.role  = true;
+    if (!form.dept) newErrors.dept = true;
+    if (!form.role) newErrors.role = true;
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
 
   async function handleAddUser() {
     if (!validateForm()) return;
+    
+    // تحديد الكولكشن المستهدف بناءً على الرول المختار
+    const targetCollection = form.role === "Admin" ? "admins" : "students";
+
     try {
-      await addDoc(collection(db, "users"), {
+      await addDoc(collection(db, targetCollection), {
         name: form.name.trim(),
         email: form.email.trim(),
         dept: form.dept,
@@ -181,10 +206,12 @@ export default function UserManagement() {
     }
   }
 
-  async function handleDeleteUser(id) {
-    if (window.confirm("Are you sure you want to delete this user?")) {
+  async function handleDeleteUser(user) {
+    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
+      // تحديد الكولكشن للحذف بناءً على رول المستخدم الحالي
+      const targetCollection = user.role === "Admin" ? "admins" : "students";
       try {
-        await deleteDoc(doc(db, "users", id));
+        await deleteDoc(doc(db, targetCollection, user.id));
       } catch (err) {
         console.error("Error deleting user:", err);
       }
@@ -196,122 +223,87 @@ export default function UserManagement() {
     setPage(1);
   }
 
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <div className="bg-light my-4 mb-0 py-5">
-      
       <div className="container-xl py-4 px-3 px-md-4">
         <div className="container p-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between">
-          <div className="col-md-6">
-            <h1 className="brown fw-bolder fa-2x">User Management</h1>
-            <p className="fs-4 brown">Manage student, faculty data and system permissions</p>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-center">
+            <div className="col-md-6 text-center text-md-start">
+              <h1 className="brown fw-bolder">User Management</h1>
+              <p className="fs-5 text-muted">Manage student, faculty data and system permissions</p>
+            </div>
+            <div className="d-flex gap-2 mt-3 mt-md-0">
+               <input 
+                  type="text" 
+                  className="form-control rounded-4 px-3" 
+                  placeholder="Search by name, email..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{ width: '250px' }}
+               />
+               <button
+                 onClick={() => setIsOpen(true)}
+                 className="bg-brown text-white p-3 px-4 rounded-4 shadow-sm border-0 hover"
+               >
+                 <i className="fa-solid fa-plus me-1"></i> Add User
+               </button>
+            </div>
           </div>
-          <button
-            onClick={() => setIsOpen(true)}
-            className="col-md-2 p-1 rounded-4 border-0 my-3 text-nowrap text-white fw-bold bg-brown shadow hover"
+        </div>
+
+        {/* Modal / Form */}
+        {isOpen && (
+          <div
+            className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 1050 }}
           >
-            <i className="fa-solid fa-plus me-1"></i> Add New User
-          </button>
-        </div>
-      </div>
-
-      {isOpen && (
-        <div
-          className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
-          style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
-        >
-          <div className="bg-white p-5 rounded-4 shadow w-75">
-            <h1 className="fw-bold brown border-bottom pb-3 mb-3">
-              Add New User
-            </h1>
-
-            <form onSubmit={(e) => e.preventDefault()}>
-              <div className="row">
+            <div className="bg-white p-4 p-md-5 rounded-4 shadow w-75" style={{maxWidth: '800px'}}>
+              <h2 className="fw-bold brown border-bottom pb-3 mb-4">Add New User</h2>
+              <form className="row g-3">
                 <div className="col-md-6">
-                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Full Name *</label>
-                <input
-                  type="text"
-                  className={`form-control form-control-sm ${errors.name ? "is-invalid" : ""}`}
-                  placeholder="e.g. Sara Ahmed"
-                  value={form.name}
-                  onChange={(e) => handleFormChange("name", e.target.value)}
-                />
+                  <label className="form-label small fw-bold text-uppercase">Full Name *</label>
+                  <input type="text" className={`form-control ${errors.name ? "is-invalid" : ""}`} value={form.name} onChange={(e) => handleFormChange("name", e.target.value)} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Email *</label>
-                <input
-                  type="email"
-                  className={`form-control form-control-sm ${errors.email ? "is-invalid" : ""}`}
-                  placeholder="user@univ.edu.sa"
-                  value={form.email}
-                  onChange={(e) => handleFormChange("email", e.target.value)}
-                />
-                </div>
-              </div>
-
-              <div className="row">
-                <div className="col-md-6">
-                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Department *</label>
-                <select
-                  className={`form-select form-select-sm ${errors.dept ? "is-invalid" : ""}`}
-                  value={form.dept}
-                  onChange={(e) => handleFormChange("dept", e.target.value)}
-                >
-                  <option value="">Select...</option>
-                  {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
+                  <label className="form-label small fw-bold text-uppercase">Email *</label>
+                  <input type="email" className={`form-control ${errors.email ? "is-invalid" : ""}`} value={form.email} onChange={(e) => handleFormChange("email", e.target.value)} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Role *</label>
-                <select
-                  className={`form-select form-select-sm ${errors.role ? "is-invalid" : ""}`}
-                  value={form.role}
-                  onChange={(e) => handleFormChange("role", e.target.value)}
-                >
-                  <option value="">Select...</option>
-                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
+                  <label className="form-label small fw-bold text-uppercase">Department *</label>
+                  <select className={`form-select ${errors.dept ? "is-invalid" : ""}`} value={form.dept} onChange={(e) => handleFormChange("dept", e.target.value)}>
+                    <option value="">Select Department</option>
+                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
                 </div>
-              </div>
-
-              <div className="col-6">
-                <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Status</label>
-                <select className="form-select form-select-sm" value={form.status} onChange={(e) => handleFormChange("status", e.target.value)}>
-                  <option value="Active">Active</option>
-                  <option value="Suspended">Suspended</option>
-                </select>
-              </div>
-
-               <div className="col-6 col-lg-1">
-                <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Books</label>
-                <input type="number" min="0" className="form-control form-control-sm" value={form.books} onChange={(e) => handleFormChange("books", e.target.value)} />
-              </div>
-
-              {Object.keys(errors).length > 0 && <p className="text-danger small mb-2">⚠️ Please fill in all required fields.</p>}
-              <div className="d-flex gap-2 mt-5 justify-content-end">
-                <button
-                  onClick={handleAddUser}
-                  type="button"
-                  className="p-2 rounded-3 border-0 text-white fw-bold bg-brown hover col-2"
-                >
-                 Add 
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary col-2"
-                  onClick={() => { setIsOpen(false);setForm(EMPTY_FORM); setErrors({}); }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-uppercase">Role *</label>
+                  <select className={`form-select ${errors.role ? "is-invalid" : ""}`} value={form.role} onChange={(e) => handleFormChange("role", e.target.value)}>
+                    <option value="">Select Role</option>
+                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-uppercase">Status</label>
+                  <select className="form-select" value={form.status} onChange={(e) => handleFormChange("status", e.target.value)}>
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                  </select>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-uppercase">Books</label>
+                  <input type="number" className="form-control" value={form.books} onChange={(e) => handleFormChange("books", e.target.value)} />
+                </div>
+                
+                {Object.keys(errors).length > 0 && <div className="col-12 text-danger small">⚠️ Please fill in all required fields.</div>}
+                
+                <div className="col-12 d-flex gap-2 justify-content-end mt-4">
+                  <button type="button" className="bg-brown text-white px-4 py-2 rounded-2 hover border-0" onClick={handleAddUser}>Add User</button>
+                  <button type="button" className="btn btn-secondary px-4 py-2" onClick={() => { setIsOpen(false); setForm(EMPTY_FORM); }}>Cancel</button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-
-        
+        )}
 
         {/* Stats Cards */}
         <div className="row g-3 mb-4">
@@ -324,7 +316,7 @@ export default function UserManagement() {
         {/* Table Section */}
         <div className="card border shadow-sm">
           <div className="card-header bg-white py-0">
-            <ul className="nav nav-tabs card-header-tabs border-bottom-0">
+            <ul className="nav nav-tabs card-header-tabs">
               {TABS.map((tab) => (
                 <li className="nav-item" key={tab}>
                   <button className={`nav-link py-3 ${activeTab === tab ? "active fw-semibold text-dark" : "text-muted"}`} onClick={() => handleTabChange(tab)}>{tab}</button>
@@ -345,27 +337,27 @@ export default function UserManagement() {
               </thead>
               <tbody>
                 {visibleUsers.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-5">No users found.</td></tr>
+                  <tr><td colSpan={5} className="text-center py-5 text-muted">No users found.</td></tr>
                 ) : (
                   visibleUsers.map((user) => (
                     <tr key={user.id}>
                       <td className="ps-4">
                         <div className="d-flex align-items-center gap-3">
-                          <UserAvatar name={user.name} userId={user.id} />
+                          <UserAvatar name={user.name || "N/A"} userId={user.id} />
                           <div>
-                            <div className="fw-medium" style={{ fontSize: "0.875rem" }}>{user.name}</div>
-                            <div className="text-muted" style={{ fontSize: "0.75rem" }}>{user.email}</div>
+                            <div className="fw-medium" style={{ fontSize: "0.875rem" }}>{user.name || "Unnamed User"}</div>
+                            <div className="text-muted" style={{ fontSize: "0.75rem" }}>{user.email || "No email provided"}</div>
                           </div>
                         </div>
                       </td>
                       <td>
-                        <div className="fw-medium" style={{ fontSize: "0.875rem" }}>{user.dept}</div>
-                        <div className="text-muted" style={{ fontSize: "0.75rem" }}>{user.role}</div>
+                        <div className="fw-medium" style={{ fontSize: "0.875rem" }}>{user.dept || "No Dept"}</div>
+                        <div className="text-muted" style={{ fontSize: "0.75rem" }}>{user.role || "No Role"}</div>
                       </td>
                       <td style={{ fontSize: "0.875rem" }}>{user.books || 0} books</td>
                       <td><StatusBadge status={user.status} /></td>
                       <td>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteUser(user.id)}>🗑</button>
+                        <button className="btn btn-sm btn-outline-danger border-0" onClick={() => handleDeleteUser(user)}>🗑</button>
                       </td>
                     </tr>
                   ))
@@ -373,8 +365,7 @@ export default function UserManagement() {
               </tbody>
             </table>
           </div>
-          {/* Pagination */}
-          <div className="card-footer bg-white d-flex justify-content-between py-3">
+          <div className="card-footer bg-white d-flex justify-content-between align-items-center py-3">
             <span className="text-muted small">Showing {visibleUsers.length} of {filteredUsers.length}</span>
             <nav>
               <ul className="pagination pagination-sm mb-0">
