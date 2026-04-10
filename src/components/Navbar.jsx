@@ -285,6 +285,17 @@ function Navbar() {
                 </>
               )}
 
+               {/* ✅ زرار الدكتور */}
+            {role === "doctor" && (
+              <NavLink
+                className="nav-link m-1 text-white hover rounded-5 px-4"
+               to="/submit-book-Dr"
+                onClick={() => setIsopen(false)}
+              >
+                Submit Book
+              </NavLink>
+            )}
+
               <Link className="px-4 my-2 d-md-none" to="/user">
                 <span className="rounded-circle border p-1 hover-bg">
                   <i className="fa-solid fa-user text-white"></i>
