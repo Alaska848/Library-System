@@ -74,7 +74,6 @@ function StatCard({ icon, label, value, badge, badgeColor }) {
 }
 
 function UserAvatar({ name, userId }) {
-  // بما أن الـ ID أصبح نصياً، نستخدم طول النص لتحديد اللون
   const colorIndex = typeof userId === 'string' ? userId.length : userId;
   const { bg, color } = AVATAR_COLORS[colorIndex % AVATAR_COLORS.length];
   return (
@@ -103,7 +102,7 @@ export default function UserManagement() {
   const [form,      setForm]      = useState(EMPTY_FORM);
   const [errors,    setErrors]    = useState({});
 
-  // جلب البيانات لحظياً من Firestore
+  
   useEffect(() => {
     const colRef = collection(db, "users");
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
@@ -176,6 +175,7 @@ export default function UserManagement() {
       setForm(EMPTY_FORM);
       setErrors({});
       setPage(1);
+      setIsOpen(false);
     } catch (err) {
       console.error("Error adding user:", err);
     }
@@ -196,21 +196,41 @@ export default function UserManagement() {
     setPage(1);
   }
 
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <div className="bg-light my-4 py-5">
+      
       <div className="container-xl py-4 px-3 px-md-4">
-        <div className="mb-4">
-          <h2 className="fw-bold mb-1 brown" style={{ letterSpacing: "-0.4px" }}>User Management</h2>
-          <p className="text-muted mb-0 small">Manage student, faculty data and system permissions</p>
+        <div className="container p-3">
+        <div className="d-flex flex-column flex-md-row justify-content-between">
+          <div className="col-md-6">
+            <h1 className="brown fw-bolder fa-2x">User Management</h1>
+            <p className="fs-4 brown">Manage student, faculty data and system permissions</p>
+          </div>
+          <button
+            onClick={() => setIsOpen(true)}
+            className="col-md-2 p-1 rounded-4 border-0 my-3 text-nowrap text-white fw-bold bg-brown shadow hover"
+          >
+            <i className="fa-solid fa-plus me-1"></i> Add New User
+          </button>
         </div>
+      </div>
 
-        {/* Form Section */}
-        <div className="card border shadow-sm mb-4">
-          <div className="card-body">
-            <h6 className="fw-semibold mb-3">➕ Add New User</h6>
-            <div className="row g-2 g-md-3 mb-3">
-              <div className="col-12 col-sm-6 col-lg-2">
-                <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Full Name *</label>
+      {isOpen && (
+        <div
+          className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
+        >
+          <div className="bg-white p-5 rounded-4 shadow w-75">
+            <h1 className="fw-bold brown border-bottom pb-3 mb-3">
+              Add New User
+            </h1>
+
+            <form onSubmit={(e) => e.preventDefault()}>
+              <div className="row">
+                <div className="col-md-6">
+                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Full Name *</label>
                 <input
                   type="text"
                   className={`form-control form-control-sm ${errors.name ? "is-invalid" : ""}`}
@@ -218,9 +238,9 @@ export default function UserManagement() {
                   value={form.name}
                   onChange={(e) => handleFormChange("name", e.target.value)}
                 />
-              </div>
-              <div className="col-12 col-sm-6 col-lg-3">
-                <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Email *</label>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Email *</label>
                 <input
                   type="email"
                   className={`form-control form-control-sm ${errors.email ? "is-invalid" : ""}`}
@@ -228,9 +248,12 @@ export default function UserManagement() {
                   value={form.email}
                   onChange={(e) => handleFormChange("email", e.target.value)}
                 />
+                </div>
               </div>
-              <div className="col-12 col-sm-6 col-lg-2">
-                <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Department *</label>
+
+              <div className="row">
+                <div className="col-md-6">
+                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Department *</label>
                 <select
                   className={`form-select form-select-sm ${errors.dept ? "is-invalid" : ""}`}
                   value={form.dept}
@@ -239,9 +262,9 @@ export default function UserManagement() {
                   <option value="">Select...</option>
                   {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
-              </div>
-              <div className="col-12 col-sm-6 col-lg-2">
-                <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Role *</label>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Role *</label>
                 <select
                   className={`form-select form-select-sm ${errors.role ? "is-invalid" : ""}`}
                   value={form.role}
@@ -250,26 +273,45 @@ export default function UserManagement() {
                   <option value="">Select...</option>
                   {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
+                </div>
               </div>
-              <div className="col-6 col-lg-2">
+
+              <div className="col-6">
                 <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Status</label>
                 <select className="form-select form-select-sm" value={form.status} onChange={(e) => handleFormChange("status", e.target.value)}>
                   <option value="Active">Active</option>
                   <option value="Suspended">Suspended</option>
                 </select>
               </div>
-              <div className="col-6 col-lg-1">
+
+               <div className="col-6 col-lg-1">
                 <label className="form-label form-label-sm text-muted fw-semibold text-uppercase" style={{ fontSize: "0.7rem" }}>Books</label>
                 <input type="number" min="0" className="form-control form-control-sm" value={form.books} onChange={(e) => handleFormChange("books", e.target.value)} />
               </div>
-            </div>
-            {Object.keys(errors).length > 0 && <p className="text-danger small mb-2">⚠️ Please fill in all required fields.</p>}
-            <div className="d-flex justify-content-end gap-2">
-              <button className="btn btn-sm btn-outline-secondary" onClick={() => { setForm(EMPTY_FORM); setErrors({}); }}>Clear</button>
-              <button className="text-white rounded-1 fs-6 bg-brown px-2 hover" onClick={handleAddUser}>Add User</button>
-            </div>
+
+              {Object.keys(errors).length > 0 && <p className="text-danger small mb-2">⚠️ Please fill in all required fields.</p>}
+              <div className="d-flex gap-2 mt-5 justify-content-end">
+                <button
+                  onClick={handleAddUser}
+                  type="button"
+                  className="p-2 rounded-3 border-0 text-white fw-bold bg-brown hover col-2"
+                >
+                 Add 
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary col-2"
+                  onClick={() => { setIsOpen(false);setForm(EMPTY_FORM); setErrors({}); }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
+      )}
+
+        
 
         {/* Stats Cards */}
         <div className="row g-3 mb-4">
