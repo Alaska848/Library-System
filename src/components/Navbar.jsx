@@ -231,7 +231,7 @@ function Navbar() {
             id="navbarNavAltMarkup"
           >
             <div className="navbar-nav p-3 mt-3 m-md-0 p-md-1">
-              {role === "user" && (
+              {(role === "user" || role === "doctor") && (
                 <>
                   <NavLink
                     className="nav-link m-1 text-white hover rounded-5 px-4"
@@ -352,7 +352,7 @@ function Navbar() {
 
           <div className="d-md-flex align-items-center gap-3 m-2">
             {/* ── Bell — students only ── */}
-            {role === "user" && (
+            {(role === "user" || role === "doctor") && (
               <div ref={bellRef} style={{ position: "relative" }}>
                 <button
                   onClick={handleBellClick}

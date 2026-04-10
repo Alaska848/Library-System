@@ -97,7 +97,8 @@ export default function LoanNotifications() {
       unsubLoanRef.current = null;
       initializedRef.current = false;
 
-      if (!user || localStorage.getItem("role") !== "user") return;
+      const appRole = localStorage.getItem("role");
+      if (!user || (appRole !== "user" && appRole !== "doctor")) return;
 
       const q = query(collection(db, "loans"), where("userId", "==", user.uid));
 

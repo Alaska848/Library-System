@@ -39,7 +39,7 @@ function Login() {
       const doctorSnap = await getDoc(doctorRef);
 
       if (doctorSnap.exists()) {
-        localStorage.setItem("role", "user");
+        localStorage.setItem("role", "doctor");
         navigate("/home");
         return;
       }

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
+import { getBorrowerDisplayName } from "./borrowerDisplayName";
 import {
   addDoc,
   collection,
-  doc,
-  getDoc,
   getDocs,
   onSnapshot,
   serverTimestamp,
@@ -154,10 +153,10 @@ function Catalog() {
     try {
       const userUid = auth.currentUser.uid;
 
-      const studentSnap = await getDoc(doc(db, "students", userUid));
-      const studentName = studentSnap.exists()
-        ? studentSnap.data().name
-        : auth.currentUser.email;
+      const studentName = await getBorrowerDisplayName(
+        userUid,
+        auth.currentUser.email,
+      );
 
       await addDoc(collection(db, "loans"), {
         bookId: selectedBook.id,
