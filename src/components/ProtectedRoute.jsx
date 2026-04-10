@@ -5,7 +5,12 @@ export default function ProtectedRoute({ children, allowedRole }) {
 
   if (!role) return <Navigate to="/" replace />;
 
-  if (allowedRole && role !== allowedRole) return <Navigate to="/" replace />;
+  if (allowedRole) {
+    const matches =
+      role === allowedRole ||
+      (allowedRole === "user" && role === "doctor");
+    if (!matches) return <Navigate to="/" replace />;
+  }
 
   return children;
 }

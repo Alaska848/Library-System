@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "./firebase";
+import { getBorrowerDisplayName } from "./borrowerDisplayName";
 import {
   addDoc,
   collection,
-  doc,
-  getDoc,
   getDocs,
   onSnapshot,
   serverTimestamp,
@@ -140,10 +139,10 @@ function LibraryHome() {
     setSubmitting(true);
     try {
       const userUid = auth.currentUser.uid;
-      const studentSnap = await getDoc(doc(db, "students", userUid));
-      const studentName = studentSnap.exists()
-        ? studentSnap.data().name || auth.currentUser.email
-        : auth.currentUser.email || "Student";
+      const studentName = await getBorrowerDisplayName(
+        userUid,
+        auth.currentUser.email || "Student",
+      );
 
       await addDoc(collection(db, "loans"), {
         bookId: selectedBook.id,
