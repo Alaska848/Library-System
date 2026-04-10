@@ -7,9 +7,9 @@ import ForgetPassword from './components/ForgetPassword';
 import BooksM from './components/admin/BooksM';
 import LayoutPage from './components/LayoutPage';
 import LibraryHome from './components/LibraryHome';
-import MyBorrowedBooks from "./components/MyBorrowedBooks";
-import BorrowingLog from "./components/admin/BorrowingLog";
 import UserManagement from './components/admin/UserManagement';
+import BorrowingLog from "./components/admin/BorrowingLog";
+import LibraryDashboard from  "./components/LibraryDashboard"
 
 const router = createBrowserRouter([
   {
@@ -23,10 +23,10 @@ const router = createBrowserRouter([
         element: <LayoutPage />,
         children: [
           { path: "home", element: <LibraryHome /> },
-          { path: "my-borrowed-books", element: <MyBorrowedBooks /> },
           { path: "admin/BooksM", element: <BooksM /> },
           { path: "admin/BorrowingLog", element: <BorrowingLog /> },
-          { path: "admin/UserManagement", element: <UserManagement /> }
+          { path: "admin/UserManagement", element: <UserManagement /> },
+          { path: "my-borrowed-books", element: <LibraryDashboard /> }
         ],
       },
     ],
