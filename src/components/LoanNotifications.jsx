@@ -91,6 +91,60 @@ export default function LoanNotifications() {
   const unsubLoanRef = useRef(null);
   const initializedRef = useRef(false);
 
+  // ── Doctor book-request notifications ──────────────────────────────────
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (!user || localStorage.getItem("role") !== "doctor") return;
+
+      const q = query(
+        collection(db, "books"),
+        where("createdBy", "==", user.uid),
+        where("source", "==", "doctor_request")
+      );
+
+      const notifiedBook = (id) => `book_req_${id}`;
+
+      const unsub = onSnapshot(q, (snap) => {
+        snap.docChanges().forEach((change) => {
+          if (change.type !== "modified") return;
+          const id = change.doc.id;
+          const data = change.doc.data();
+          const status = data.requestStatus;
+          const book = data.title || "your book";
+          const uid = user.uid;
+          const notified = getNotified(uid);
+
+          if (status === "approved" && !notified.has(notifiedBook(id) + "_approved")) {
+            markNotified(uid, notifiedBook(id) + "_approved");
+            addNotification(
+              {
+                type: "accept",
+                book,
+                message: `Your submission "${book}" has been approved.`,
+              },
+              uid
+            );
+          } else if (status === "rejected" && !notified.has(notifiedBook(id) + "_rejected")) {
+            markNotified(uid, notifiedBook(id) + "_rejected");
+            addNotification(
+              {
+                type: "reject",
+                book,
+                message: `Your submission "${book}" was rejected.`,
+              },
+              uid
+            );
+          }
+        });
+      });
+
+      return () => unsub();
+    });
+
+    return () => unsubAuth();
+  }, []);
+
+  // ── Loan notifications ───────────────────────────────────────────────────
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       unsubLoanRef.current?.();

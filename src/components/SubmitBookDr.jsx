@@ -51,6 +51,8 @@ function SubmitBookDr() {
         coverUrl: "", // ممكن نضيف upload بعدين
         createdBy: auth.currentUser?.uid,
         createdAt: serverTimestamp(),
+        source: "doctor_request",
+        requestStatus: "pending",
       });
 
       Swal.fire({
@@ -76,11 +78,18 @@ function SubmitBookDr() {
       Swal.fire("Error", err.message, "error");
     }
   };
+  
+    const categories = [
+                "Philosophy", "History", "Science", "Mathematics",
+                "Computer Science", "Literature", "Engineering",
+                "Business", "Psychology", "Art", "Medicine",
+                "Economics", "Law"
+                ];
 
   return (
-    <div className="container py-5">
-      <div className="bg-white p-4 p-md-5 rounded-4 shadow">
-        <h3 className="fw-bold text-center mb-4">
+    <div className="container mt-5 py-5">
+      <div className="bg-white p-4 p-md-5 ">
+        <h3 className="fw-bold text-center mb-4 brown">
           Book Submission for Lending
         </h3>
 
@@ -129,18 +138,22 @@ function SubmitBookDr() {
 
             {/* Category */}
             <div className="col-md-6">
-              <label className="fw-semibold">Book Classification</label>
-              <select
-                name="category"
-                className="form-control"
-                value={form.category}
-                onChange={handleChange}
-              >
-                <option>Computer Science</option>
-                <option>Engineering</option>
-                <option>Medicine</option>
-              </select>
-            </div>
+                  <label htmlFor="category" className="brown">Category</label>
+                  <select
+                    id="category"
+                    name="category"
+                    className="form-control mb-3"
+                    required
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
             {/* Lending Type */}
             <div className="col-md-6">
@@ -188,16 +201,15 @@ function SubmitBookDr() {
                 Book Status
               </label>
               <div className="d-flex gap-2">
-                {["Used", "Very Good", "New"].map((s) => (
+                {["Used", "Good", "New"].map((s) => (
                   <button
                     type="button"
                     key={s}
                     onClick={() => setForm({ ...form, status: s })}
-                    className={`btn ${
-                      form.status === s
+                    className={`btn ${form.status === s
                         ? "bg-brown text-white"
                         : "btn-outline-secondary"
-                    }`}
+                      }`}
                   >
                     {s}
                   </button>
@@ -231,7 +243,7 @@ function SubmitBookDr() {
 
           {/* Buttons */}
           <div className="d-flex gap-3 mt-4">
-            <button className="btn bg-brown text-white px-4 py-2">
+            <button className="bg-brown text-white px-4 py-2 rounded-2 border-0 hover">
               Submit Request
             </button>
             <button
@@ -246,7 +258,7 @@ function SubmitBookDr() {
 
         {/* Note */}
         <div className="alert alert-warning mt-4">
-          Your request will be reviewed within 48 hours via university email.
+          Your request will be reviewed within 48 hours via email.
         </div>
       </div>
     </div>

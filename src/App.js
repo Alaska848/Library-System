@@ -13,6 +13,7 @@ import LibraryDashboard from "./components/LibraryDashboard";
 import Catalog from "./components/Catalog";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SubmitBookDr from "./components/SubmitBookDr";
+import FacultyRequests from "./components/admin/FacultyRequests";
 
 const router = createBrowserRouter([
   {
@@ -73,14 +74,22 @@ const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-             {
-              path: "submit-book-Dr",
-              element: (
-                <ProtectedRoute allowedRole="doctor">
-                 <SubmitBookDr />
-                   </ProtectedRoute>
-              ),
-            },
+          {
+            path: "submit-book-Dr",
+            element: (
+              <ProtectedRoute allowedRole="doctor">
+                <SubmitBookDr />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "admin/FacultyRequests",
+            element: (
+              <ProtectedRoute allowedRole="admin">
+                <FacultyRequests />
+              </ProtectedRoute>
+            ),
+          }
         ],
       },
     ],

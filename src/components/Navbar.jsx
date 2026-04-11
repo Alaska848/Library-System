@@ -296,6 +296,13 @@ function Navbar() {
                   >
                     User Management
                   </NavLink>
+                  <NavLink
+                    className="nav-link m-1 text-white hover rounded-5 px-4"
+                    to="/admin/FacultyRequests"
+                    onClick={() => setIsopen(false)}
+                  >
+                    Faculty Requests
+                  </NavLink>
                 </>
               )}
 
