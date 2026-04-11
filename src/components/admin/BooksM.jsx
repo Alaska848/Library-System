@@ -158,6 +158,13 @@ function BooksM() {
     }
   };
 
+  const categories = [
+                "Philosophy", "History", "Science", "Mathematics",
+                "Computer Science", "Literature", "Engineering",
+                "Business", "Psychology", "Art", "Medicine",
+                "Economics", "Law"
+                ];
+
   return (
     <div className="my-5 pt-5">
       <div className="container p-3">
@@ -224,16 +231,25 @@ function BooksM() {
                     required
                   />
                 </div>
+                
+
+              
                 <div className="col-md-6">
                   <label htmlFor="category" className="brown">Category</label>
-                  <input
+                  <select
                     id="category"
-                    type="text"
                     name="category"
                     className="form-control mb-3"
-                    placeholder="e.g. history"
                     required
-                  />
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
