@@ -18,8 +18,8 @@ function BooksM() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
 
-  // ✅ FIX 1: حالة الـ Edit Modal
   const [editingBook, setEditingBook] = useState(null);
+
   const [editForm, setEditForm] = useState({
     title: "",
     author: "",
@@ -30,7 +30,23 @@ function BooksM() {
 
   const booksCollection = collection(db, "books");
 
-  // ✅ FIX 2: تصحيح شرط الـ Status من "الكل" إلى "All"
+  // 📌 أشهر تخصصات الكتب
+  const categories = [
+    "Philosophy",
+    "History",
+    "Science",
+    "Mathematics",
+    "Computer Science",
+    "Literature",
+    "Engineering",
+    "Business",
+    "Psychology",
+    "Art",
+    "Medicine",
+    "Economics",
+    "Law",
+  ];
+
   const filteredBooks = books.filter((book) => {
     const matchesSearch =
       book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,17 +60,14 @@ function BooksM() {
   });
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      booksCollection,
-      (snapshot) => {
-        const booksList = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        setBooks(booksList);
-      },
-      (error) => console.error("books listener:", error),
-    );
+    const unsub = onSnapshot(booksCollection, (snapshot) => {
+      const booksList = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      setBooks(booksList);
+    });
+
     return () => unsub();
   }, []);
 
@@ -116,15 +129,9 @@ function BooksM() {
     );
     if (!confirmed) return;
 
-    try {
-      await deleteDoc(doc(db, "books", book.id));
-    } catch (error) {
-      console.log(error);
-      alert("Error deleting book");
-    }
+    await deleteDoc(doc(db, "books", book.id));
   };
 
-  // ✅ FIX 3: فتح الـ Edit Modal وملء البيانات
   const openEditModal = (book) => {
     setEditingBook(book);
     setEditForm({
@@ -136,12 +143,13 @@ function BooksM() {
     });
   };
 
-  // ✅ FIX 3: حفظ التعديل
   const handleEditSave = async (e) => {
     e.preventDefault();
     if (!editingBook) return;
+
     try {
       setLoading(true);
+
       await updateDoc(doc(db, "books", editingBook.id), {
         title: editForm.title,
         author: editForm.author,
@@ -149,6 +157,7 @@ function BooksM() {
         category: editForm.category,
         description: editForm.description,
       });
+
       setEditingBook(null);
     } catch (error) {
       console.log(error);
@@ -161,319 +170,162 @@ function BooksM() {
   return (
     <div className="my-5 pt-5">
       <div className="container p-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between">
-          <div className="col-md-6">
-            <h1 className="brown fw-bolder fa-3x">Book Management</h1>
-            <p className="fs-3 brown">Manage Library Content</p>
+        <div className="d-flex justify-content-between">
+          <div>
+            <h1 className="brown fw-bolder">Book Management</h1>
+            <p className="fs-4 brown">Manage Library Content</p>
           </div>
+
           <button
             onClick={() => setIsOpen(true)}
-            className="col-md-3 p-2 py-3 rounded-4 border-0 my-3 text-nowrap text-white fw-bold bg-brown shadow hover"
+            className="p-2 px-4 rounded-4 border-0 text-white bg-brown fw-bold"
           >
-            <i className="fa-solid fa-plus me-1"></i> Add New Book
+            Add New Book
           </button>
         </div>
       </div>
 
-      {/* Add Book Modal */}
+      {/* ADD MODAL */}
       {isOpen && (
-        <div
-          className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
-          style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
-        >
-          <div className="bg-white p-5 rounded-4 shadow w-75">
-            <h1 className="fw-bold brown border-bottom pb-3 mb-3">
-              Add New Book
-            </h1>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div className="bg-white p-4 rounded-4 w-75">
+            <h3>Add Book</h3>
 
             <form onSubmit={handleAddBook}>
-              <div className="row">
-                <div className="col-md-6">
-                  <label htmlFor="title" className="brown">Book Title</label>
-                  <input
-                    id="title"
-                    type="text"
-                    name="bookName"
-                    className="form-control mb-3"
-                    placeholder="e.g. The Republic"
-                    required
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label htmlFor="author" className="brown">Author</label>
-                  <input
-                    id="author"
-                    type="text"
-                    name="Author"
-                    className="form-control mb-3"
-                    placeholder="e.g. Plato"
-                    required
-                  />
-                </div>
-              </div>
+              <input name="bookName" className="form-control mb-2" placeholder="Title" />
+              <input name="Author" className="form-control mb-2" placeholder="Author" />
+              <input name="isbn" className="form-control mb-2" placeholder="ISBN" />
 
-              <div className="row">
-                <div className="col-md-6">
-                  <label htmlFor="isbn" className="brown">ISBN Number</label>
-                  <input
-                    id="isbn"
-                    type="text"
-                    name="isbn"
-                    className="form-control mb-3"
-                    placeholder="978-3-16-148410-0"
-                    required
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label htmlFor="category" className="brown">Category</label>
-                  <input
-                    id="category"
-                    type="text"
-                    name="category"
-                    className="form-control mb-3"
-                    placeholder="e.g. history"
-                    required
-                  />
-                </div>
-              </div>
+              {/* CATEGORY DROPDOWN */}
+              <select
+                name="category"
+                className="form-control mb-2"
+                required
+              >
+                <option value="">Select Category</option>
+                {categories.map((cat, i) => (
+                  <option key={i} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
 
-              <label htmlFor="des" className="brown">Description</label>
               <textarea
-                id="des"
                 name="Description"
-                className="form-control mb-3"
-                placeholder="Provide a brief summary of the book..."
-                required
+                className="form-control mb-2"
+                placeholder="Description"
               />
 
-              <label htmlFor="img" className="brown">Book Cover Image</label>
               <input
-                onChange={(e) => setImage(e.target.files[0])}
-                id="img"
                 type="file"
-                name="cover"
-                className="form-control mb-3"
-                accept="image/*"
-                required
+                className="form-control mb-2"
+                onChange={(e) => setImage(e.target.files[0])}
               />
 
-              <div className="d-flex gap-2 mt-5 justify-content-end">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="p-2 rounded-3 border-0 text-white fw-bold bg-brown hover col-2"
-                >
-                  {loading ? "Adding..." : "Add"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary col-2"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Cancel
-                </button>
-              </div>
+              <button className="btn btn-success w-100">
+                {loading ? "Loading..." : "Add"}
+              </button>
             </form>
+
+            <button className="btn btn-secondary mt-2 w-100" onClick={() => setIsOpen(false)}>
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
-      {/* ✅ FIX 3: Edit Book Modal */}
+      {/* EDIT MODAL */}
       {editingBook && (
-        <div
-          className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
-          style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
-        >
-          <div className="bg-white p-5 rounded-4 shadow w-75">
-            <h1 className="fw-bold brown border-bottom pb-3 mb-3">
-              Edit Book
-            </h1>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div className="bg-white p-4 rounded-4 w-75">
+            <h3>Edit Book</h3>
 
             <form onSubmit={handleEditSave}>
-              <div className="row">
-                <div className="col-md-6">
-                  <label className="brown">Book Title</label>
-                  <input
-                    type="text"
-                    className="form-control mb-3"
-                    value={editForm.title}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, title: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label className="brown">Author</label>
-                  <input
-                    type="text"
-                    className="form-control mb-3"
-                    value={editForm.author}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, author: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
+              <input
+                className="form-control mb-2"
+                value={editForm.title}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, title: e.target.value })
+                }
+              />
 
-              <div className="row">
-                <div className="col-md-6">
-                  <label className="brown">ISBN Number</label>
-                  <input
-                    type="text"
-                    className="form-control mb-3"
-                    value={editForm.isbn}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, isbn: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label className="brown">Category</label>
-                  <input
-                    type="text"
-                    className="form-control mb-3"
-                    value={editForm.category}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, category: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
+              <input
+                className="form-control mb-2"
+                value={editForm.author}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, author: e.target.value })
+                }
+              />
 
-              <label className="brown">Description</label>
+              <input
+                className="form-control mb-2"
+                value={editForm.isbn}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, isbn: e.target.value })
+                }
+              />
+
+              {/* CATEGORY DROPDOWN */}
+              <select
+                className="form-control mb-2"
+                value={editForm.category}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, category: e.target.value })
+                }
+              >
+                <option value="">Select Category</option>
+                {categories.map((cat, i) => (
+                  <option key={i} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+
               <textarea
-                className="form-control mb-3"
+                className="form-control mb-2"
                 value={editForm.description}
                 onChange={(e) =>
                   setEditForm({ ...editForm, description: e.target.value })
                 }
-                required
               />
 
-              <div className="d-flex gap-2 mt-4 justify-content-end">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="p-2 rounded-3 border-0 text-white fw-bold bg-brown hover col-2"
-                >
-                  {loading ? "Saving..." : "Save"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary col-2"
-                  onClick={() => setEditingBook(null)}
-                >
-                  Cancel
-                </button>
-              </div>
+              <button className="btn btn-primary w-100">
+                {loading ? "Saving..." : "Save"}
+              </button>
             </form>
+
+            <button
+              className="btn btn-secondary mt-2 w-100"
+              onClick={() => setEditingBook(null)}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
-      <div className="container p-3">
-        <div className="border p-3 my-3 rounded-4">
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-5">
-            <div className="d-flex flex-wrap gap-2">
-              {["All", "available", "Borrowed", "fixing"].map((status) => (
-                <button
-                  key={status}
-                  className={
-                    selectedStatus === status
-                      ? "p-2 rounded-3 border-0 text-white fw-bold bg-brown shadow hover"
-                      : "btn btn-light"
-                  }
-                  onClick={() => setSelectedStatus(status)}
-                >
-                  {status}
-                </button>
-              ))}
+      {/* TABLE */}
+      <div className="container mt-4">
+        {filteredBooks.map((book) => (
+          <div key={book.id} className="card p-3 mb-2 d-flex flex-row justify-content-between">
+            <div>
+              <h5>{book.title}</h5>
+              <p>{book.author}</p>
+              <small>{book.category}</small>
             </div>
 
-            <div className="position-relative" style={{ minWidth: "280px" }}>
-              <input
-                type="text"
-                className="form-control pe-5"
-                placeholder="Search by book name, author, or ISBN..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <i
-                className="fa-solid fa-magnifying-glass position-absolute top-50 translate-middle-y me-3 text-muted"
-                style={{ right: "10px" }}
-              ></i>
+            <div>
+              <button onClick={() => openEditModal(book)} className="btn btn-warning me-2">
+                Edit
+              </button>
+              <button onClick={() => deleteBook(book)} className="btn btn-danger">
+                Delete
+              </button>
             </div>
           </div>
-
-          <div>
-            {books.length === 0 ? (
-              <div className="text-center py-4">
-                <i className="fa-solid fa-book mb-3 brown"></i>
-                <p className="font-medium brown">No Books Added</p>
-              </div>
-            ) : filteredBooks.length === 0 ? (
-              // ✅ حالة: في كتب لكن الفلتر مش لاقي نتايج
-              <div className="text-center py-4">
-                <i className="fa-solid fa-magnifying-glass mb-3 brown"></i>
-                <p className="font-medium brown">No books match your search</p>
-              </div>
-            ) : (
-              <div>
-                <div className="d-flex px-3 mb-3 text-center fw-bold border-bottom pb-3">
-                  <div className="col">BOOK</div>
-                  <div className="col">AUTHOR</div>
-                  <div className="col">CATEGORY</div>
-                  <div className="col">STATUS</div>
-                  <div className="col">PROCEDURES</div>
-                </div>
-
-                {/* ✅ FIX 2: استخدام filteredBooks بدل books */}
-                {filteredBooks.map((book) => (
-                  <div
-                    key={book.id}
-                    className="card p-3 shadow mb-3 d-flex flex-row align-items-center text-center"
-                  >
-                    <div className="col d-flex align-items-center gap-2">
-                      <div className="rounded-3">
-                        <img
-                          src={book.coverUrl}
-                          alt={book.title}
-                          style={{ width: "50px" }}
-                        />
-                      </div>
-                      <p className="m-0">{book.title}</p>
-                    </div>
-
-                    <p className="m-0 col">{book.author}</p>
-                    <p className="m-0 col">{book.category}</p>
-                    <p className="m-0 col">{book.status || "—"}</p>
-
-                    <div className="col text-center d-flex justify-content-center gap-3">
-                      {/* ✅ FIX 3: فتح الـ Edit Modal */}
-                      <button
-                        onClick={() => openEditModal(book)}
-                        className="bg-transparent border-0"
-                      >
-                        <i className="fa-solid fa-pen text-primary"></i>
-                      </button>
-
-                      <button
-                        onClick={() => deleteBook(book)}
-                        className="bg-transparent border-0"
-                      >
-                        <i className="fa-solid fa-trash-can text-danger"></i>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
