@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import Swal from "sweetalert2";
@@ -17,40 +17,72 @@ function Login() {
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
 
-      const adminRef = doc(db, "admins", cred.user.uid);
-      const adminSnap = await getDoc(adminRef);
+      const uid = cred.user.uid;
 
+      const adminSnap = await getDoc(doc(db, "admins", uid));
       if (adminSnap.exists()) {
         localStorage.setItem("role", "admin");
         navigate("/admin/BooksM");
         return;
       }
 
-      const studentRef = doc(db, "students", cred.user.uid);
-      const studentSnap = await getDoc(studentRef);
-
+   
+      const studentSnap = await getDoc(doc(db, "students", uid));
       if (studentSnap.exists()) {
+        const studentData = studentSnap.data();
+
+         if (studentData.status?.toLowerCase().trim() !== "active") {
+          await signOut(auth);
+          Swal.fire({
+            title: "Account Suspended",
+            text: "Your account has been suspended. Please contact the library administration.",
+            icon: "error",
+            confirmButtonText: "Ok",
+            confirmButtonColor: "#633a19",
+          });
+          return;
+        }
+
+
+        localStorage.setItem("role", "user");
+        navigate("/home");
+        return;
+      }
+      
+
+    
+      const doctorSnap = await getDoc(doc(db, "doctors", uid));
+      if (doctorSnap.exists()) {
+        const doctorData = doctorSnap.data();
+
+   if (doctorData.status?.toLowerCase().trim() !== "active") {
+  await signOut(auth);
+  Swal.fire({
+    title: "Access Denied",
+    text: "Your account is not active",
+    icon: "error",
+  });
+  return;
+}
+
         localStorage.setItem("role", "user");
         navigate("/home");
         return;
       }
 
-      const doctorRef = doc(db, "doctors", cred.user.uid);
-      const doctorSnap = await getDoc(doctorRef);
+      await signOut(auth);
+      Swal.fire({
+        title: "Access Denied",
+        text: "User not registered in system",
+        icon: "error",
+        confirmButtonText: "Ok",
+        confirmButtonColor: "#633a19",
+      });
 
-      if (doctorSnap.exists()) {
-        localStorage.setItem("role", "doctor");
-        navigate("/home");
-        return;
-      }
-
-      localStorage.setItem("role", "user");
-      navigate("/home");
     } catch (error) {
       console.log(error.code, error.message);
-
       Swal.fire({
-        title: "INVALID LOGGED IN",
+        title: "INVALID LOGIN",
         text: "Try Again",
         icon: "error",
         confirmButtonText: "Ok",
@@ -70,7 +102,6 @@ function Login() {
               </div>
 
               <h3 className="darkorange fw-bolder px-4 mt-4">Welcome Back</h3>
-
               <p className="px-4">
                 Access your digital collection and resources
               </p>
@@ -78,36 +109,24 @@ function Login() {
 
             <form onSubmit={handleLogin} className="row g-3 mb-4 px-4">
               <div className="col-md-12 mb-3">
-                <label htmlFor="Email" className="form-label">
-                  Institutional Email
-                </label>
-
+                <label className="form-label">Institutional Email</label>
                 <input
                   type="email"
                   className="form-control"
-                  id="Email"
-                  placeholder="student@university.edu"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu(\.eg)?$"
-                  title="Please enter a valid university email (.edu or .edu.eg)"
                 />
               </div>
 
               <div className="col-md-12 mb-4 text-end position-relative">
-                <label
-                  htmlFor="password"
-                  className="form-label w-100 text-start"
-                >
+                <label className="form-label w-100 text-start">
                   Password
                 </label>
 
                 <input
                   type={showPassword ? "text" : "password"}
                   className="form-control pe-5"
-                  id="password"
-                  placeholder="******"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -129,16 +148,16 @@ function Login() {
 
                 <Link
                   to="/forgetPassword"
-                  className="border-0 bg-transparent fa-xs mt-4 brown text-decoration-none hover-links"
+                  className="text-decoration-none fa-xs mt-4 brown"
                 >
                   Forgot password?
                 </Link>
               </div>
 
-              <div className="col-12 mx-auto d-flex justify-content-center text-center">
+              <div className="col-12 d-flex justify-content-center">
                 <button
                   type="submit"
-                  className="text-decoration-none p-2 py-3 rounded-4 border-0 mb-2 text-nowrap text-white fw-bold w-100 bg-brown shadow hover"
+                  className="p-3 rounded-4 border-0 text-white fw-bold w-100 bg-brown shadow"
                 >
                   Sign In to Library
                 </button>
@@ -149,7 +168,7 @@ function Login() {
               New to the library?{" "}
               <Link
                 to="/create-account"
-                className="text-decoration-none fw-bold brown hover-links"
+                className="text-decoration-none fw-bold brown"
               >
                 Create an account
               </Link>
