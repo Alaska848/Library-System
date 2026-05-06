@@ -314,7 +314,7 @@ function Navbar() {
                 {/* Logged in: user icon + logout */}
                 {!isGuest && (
                   <div className="d-flex align-items-center gap-3">
-                    {(role === "user" || role === "doctor") && (
+                    {role && (
                       <Link className="px-2" to="/user">
                         <span className="rounded-circle border p-1 hover-bg">
                           <i className="fa-solid fa-user text-white"></i>
