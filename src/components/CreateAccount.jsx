@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import Swal from "sweetalert2";
 
@@ -59,12 +59,25 @@ function CreateAccount() {
         password,
       );
 
+      const { serverTimestamp } = await import("firebase/firestore");
+
+      // الـ collection الأصلية (لو محتاجاها في حاجة تانية)
       const collectionName = accountType === "doctor" ? "doctors" : "students";
       await setDoc(doc(db, collectionName, cred.user.uid), {
         name,
         Userid,
         email: cleanedEmail,
         role: accountType,
+        createdAt: serverTimestamp(),
+      });
+
+      // ✅ نفس البيانات في "users" عشان UserProfile يقدر يقراها
+      await setDoc(doc(db, "users", cred.user.uid), {
+        name,
+        Userid,
+        email: cleanedEmail,
+        role: accountType,
+        createdAt: serverTimestamp(),
       });
 
       await auth.signOut();

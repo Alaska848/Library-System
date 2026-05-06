@@ -14,6 +14,7 @@ import Catalog from "./components/Catalog";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SubmitBookDr from "./components/SubmitBookDr";
 import FacultyRequests from "./components/admin/FacultyRequests";
+import UserProfile from './components/UserProfile';
 
 const router = createBrowserRouter([
   {
@@ -79,6 +80,15 @@ const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
+
+            {
+              path: "user",
+              element: (
+                <ProtectedRoute allowedRoles={["user", "doctor"]}>
+                  <UserProfile />
+                </ProtectedRoute>
+              ),
+            },
 
           // Doctor
           {
