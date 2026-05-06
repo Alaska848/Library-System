@@ -20,7 +20,15 @@ function Login() {
       const adminSnap = await getDoc(doc(db, "admins", uid));
       if (adminSnap.exists()) {
         sessionStorage.setItem("role", "admin");
-        navigate("/admin/BooksM");
+        window.dispatchEvent(new Event("roleChanged"));
+        Swal.fire({
+          title: "👋 Welcome, Admin!",
+          text: "You're logged in to the admin panel.",
+          icon: "success",
+          confirmButtonColor: "#633a19",
+          timer: 2000,
+          showConfirmButton: false,
+        }).then(() => navigate("/admin/BooksM"));
         return;
       }
 
@@ -33,7 +41,16 @@ function Login() {
           return;
         }
         sessionStorage.setItem("role", "user");
-        navigate("/home");
+        window.dispatchEvent(new Event("roleChanged"));
+        const isNew = !studentData.lastLogin;
+        Swal.fire({
+          title: isNew ? `👋 Welcome, ${studentData.name || ""}!` : `🎉 Welcome Back, ${studentData.name || ""}!`,
+          text: isNew ? "We're glad to have you here. Start exploring our collection!" : "Great to see you again. Happy reading!",
+          icon: "success",
+          confirmButtonColor: "#633a19",
+          timer: 2500,
+          showConfirmButton: false,
+        }).then(() => navigate("/home"));
         return;
       }
 
@@ -46,7 +63,16 @@ function Login() {
           return;
         }
         sessionStorage.setItem("role", "doctor");
-        navigate("/home");
+        window.dispatchEvent(new Event("roleChanged"));
+        const isNewDoc = !doctorData.lastLogin;
+        Swal.fire({
+          title: isNewDoc ? `👋 Welcome, ${doctorData.name || ""}!` : `🎉 Welcome Back, ${doctorData.name || ""}!`,
+          text: isNewDoc ? "We're glad to have you here!" : "Great to see you again!",
+          icon: "success",
+          confirmButtonColor: "#633a19",
+          timer: 2500,
+          showConfirmButton: false,
+        }).then(() => navigate("/home"));
         return;
       }
 
@@ -68,6 +94,12 @@ function Login() {
             </div>
             <h3 className="darkorange fw-bolder px-4 mt-4">Welcome Back</h3>
             <p className="px-4">Access your digital collection and resources</p>
+          </div>
+
+          <div className="px-4 mb-2">
+            <Link to="/" className="text-decoration-none brown fw-semibold small">
+              <i className="fa-solid fa-arrow-left me-1"></i> Back to Home
+            </Link>
           </div>
 
           <form onSubmit={handleLogin} className="row g-3 mb-4 px-4">

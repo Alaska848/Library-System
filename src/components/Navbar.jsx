@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import Swal from "sweetalert2";
 import {
   getNotifications,
   markAllRead,
@@ -135,12 +136,25 @@ function Navbar() {
     setShowSearch(false);
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    sessionStorage.removeItem("role");
-    setRole(null);
-    window.dispatchEvent(new Event("roleChanged"));
-    navigate("/");
+  const handleLogout = () => {
+    Swal.fire({
+      title: "Leaving already?",
+      text: "We'll miss you! Come back soon.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, log out",
+      cancelButtonText: "Stay",
+      confirmButtonColor: "#633a19",
+      cancelButtonColor: "#6c757d",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await signOut(auth);
+        sessionStorage.removeItem("role");
+        setRole(null);
+        window.dispatchEvent(new Event("roleChanged"));
+        navigate("/");
+      }
+    });
   };
 
   return (
@@ -314,7 +328,7 @@ function Navbar() {
                 {/* Logged in: user icon + logout */}
                 {!isGuest && (
                   <div className="d-flex align-items-center gap-3">
-                    {role && (
+                    {(role === "user" || role === "doctor") && (
                       <Link className="px-2" to="/user">
                         <span className="rounded-circle border p-1 hover-bg">
                           <i className="fa-solid fa-user text-white"></i>

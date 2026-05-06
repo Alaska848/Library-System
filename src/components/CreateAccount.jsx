@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import Swal from "sweetalert2";
 
@@ -59,25 +59,12 @@ function CreateAccount() {
         password,
       );
 
-      const { serverTimestamp } = await import("firebase/firestore");
-
-      // الـ collection الأصلية (لو محتاجاها في حاجة تانية)
       const collectionName = accountType === "doctor" ? "doctors" : "students";
       await setDoc(doc(db, collectionName, cred.user.uid), {
         name,
         Userid,
         email: cleanedEmail,
         role: accountType,
-        createdAt: serverTimestamp(),
-      });
-
-      // ✅ نفس البيانات في "users" عشان UserProfile يقدر يقراها
-      await setDoc(doc(db, "users", cred.user.uid), {
-        name,
-        Userid,
-        email: cleanedEmail,
-        role: accountType,
-        createdAt: serverTimestamp(),
       });
 
       await auth.signOut();
@@ -89,7 +76,7 @@ function CreateAccount() {
         confirmButtonColor: "#633a19",
       });
 
-      navigate("/");
+      navigate("/login");
     } catch (error) {
       console.log(error);
       Swal.fire({
@@ -112,6 +99,12 @@ function CreateAccount() {
               Please use your official university credentials to register for
               full access.
             </p>
+
+            <div className="px-4 mb-2">
+              <Link to="/" className="text-decoration-none brown fw-semibold small">
+                <i className="fa-solid fa-arrow-left me-1"></i> Back to Home
+              </Link>
+            </div>
 
             <form onSubmit={handleSubmit} className="row g-3 mb-4 px-4">
               {/* Account Type */}
