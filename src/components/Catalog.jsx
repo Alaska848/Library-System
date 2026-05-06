@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
 import { getBorrowerDisplayName } from "./borrowerDisplayName";
 import {
@@ -50,6 +51,8 @@ function Catalog() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  const navigate = useNavigate();
+
   // auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
@@ -98,9 +101,10 @@ function Catalog() {
 
     return () => unsub();
   }, [uid]);
-   const categories = [
-  "All",
-  "Philosophy",
+
+  const categories = [
+    "All",
+    "Philosophy",
     "History",
     "Science",
     "Mathematics",
@@ -113,7 +117,7 @@ function Catalog() {
     "Medicine",
     "Economics",
     "Law",
-];
+  ];
 
   const filteredBooks = books.filter((b) => {
     const matchesSearch =
@@ -121,16 +125,36 @@ function Catalog() {
       (b.author || "").toLowerCase().includes(query.toLowerCase()) ||
       (b.isbn || "").toLowerCase().includes(query.toLowerCase());
 
-    
-  const matchesCategory =
-  category === "All" || b.category === category;
+    const matchesCategory =
+      category === "All" || b.category === category;
 
     return matchesSearch && matchesCategory;
   });
 
   const openBorrowModal = (book) => {
+    // ✅ لو مش logged in → نبعته لصفحة Login مع رسالة
     if (!auth.currentUser) {
-      Swal.fire("Login Required", "Please login first", "info");
+      Swal.fire({
+        title: "Login Required",
+        text: "Please sign in to borrow a book.",
+        icon: "info",
+        confirmButtonText: "Sign In",
+        confirmButtonColor: "#633a19",
+        showCancelButton: true,
+        cancelButtonText: "Cancel",
+      }).then((result) => {
+        if (result.isConfirmed) navigate("/login");
+      });
+      return;
+    }
+
+    if (sessionStorage.getItem("role") === "admin") {
+      Swal.fire({
+        title: "Admin Account",
+        text: "Borrowing requests are for students only.",
+        icon: "info",
+        confirmButtonColor: "#633a19",
+      });
       return;
     }
 
@@ -199,9 +223,8 @@ function Catalog() {
           <button
             key={c}
             onClick={() => setCategory(c)}
-            className={`px-3 py-2 rounded-4 border-0 ${
-              category === c ? "bg-brown text-white" : "bg-light"
-            }`}
+            className={`px-3 py-2 rounded-4 border-0 ${category === c ? "bg-brown text-white" : "bg-light"
+              }`}
           >
             {c}
           </button>
@@ -227,6 +250,10 @@ function Catalog() {
                       alt={b.title}
                       className="w-100"
                       style={{ height: "200px", objectFit: "cover" }}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://placehold.co/400x300?text=No+Cover";
+                      }}
                     />
                     <div className="p-3">
                       <div className="small opacity-75">{b.category}</div>

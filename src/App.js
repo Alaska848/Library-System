@@ -20,20 +20,23 @@ const router = createBrowserRouter([
     path: "/",
     element: <Layout />,
     children: [
-      { index: true, element: <Login /> },
+      // ✅ صفحات بدون Navbar (login / register)
+      { path: "login", element: <Login /> },
       { path: "create-account", element: <CreateAccount /> },
       { path: "forgetPassword", element: <ForgetPassword /> },
+
+      // ✅ كل الصفحات اللي فيها Navbar
       {
         element: <LayoutPage />,
         children: [
-          {
-            path: "home",
-            element: (
-              <ProtectedRoute allowedRole="user">
-                <LibraryHome />
-              </ProtectedRoute>
-            ),
-          },
+          // الصفحة الرئيسية تفتح للكل على / مباشرة
+          { index: true, element: <LibraryHome /> },
+          { path: "home", element: <LibraryHome /> },
+
+          // Catalog مفتوح للكل — الاستعارة بتطلب login جوه الكومبوننت
+          { path: "catalog", element: <Catalog /> },
+
+          // صفحات محمية للـ user
           {
             path: "my-borrowed-books",
             element: (
@@ -42,14 +45,8 @@ const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-          {
-            path: "catalog",
-            element: (
-              <ProtectedRoute allowedRole="user">
-                <Catalog />
-              </ProtectedRoute>
-            ),
-          },
+
+          // صفحات الأدمن
           {
             path: "admin/BooksM",
             element: (
@@ -75,6 +72,16 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: "admin/FacultyRequests",
+            element: (
+              <ProtectedRoute allowedRole="admin">
+                <FacultyRequests />
+              </ProtectedRoute>
+            ),
+          },
+
+          // Doctor
+          {
             path: "submit-book-Dr",
             element: (
               <ProtectedRoute allowedRole="doctor">
@@ -82,14 +89,6 @@ const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-          {
-            path: "admin/FacultyRequests",
-            element: (
-              <ProtectedRoute allowedRole="admin">
-                <FacultyRequests />
-              </ProtectedRoute>
-            ),
-          }
         ],
       },
     ],

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
 import { getBorrowerDisplayName } from "./borrowerDisplayName";
 import {
@@ -45,6 +45,8 @@ function LibraryHome() {
   const [myPendingBookIds, setMyPendingBookIds] = useState(() => new Set());
   const [submitting, setSubmitting] = useState(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
     return () => unsub();
@@ -87,29 +89,35 @@ function LibraryHome() {
     return () => unsub();
   }, [uid]);
 
-  // ✅ Search filter — works on title, author, ISBN
   const featuredBooks = query.trim()
     ? allBooks.filter(
-        (b) =>
-          b.title?.toLowerCase().includes(query.toLowerCase()) ||
-          b.author?.toLowerCase().includes(query.toLowerCase()) ||
-          b.isbn?.toLowerCase().includes(query.toLowerCase()),
-      )
+      (b) =>
+        b.title?.toLowerCase().includes(query.toLowerCase()) ||
+        b.author?.toLowerCase().includes(query.toLowerCase()) ||
+        b.isbn?.toLowerCase().includes(query.toLowerCase()),
+    )
     : allBooks;
 
   const handleSearch = (e) => e.preventDefault();
 
   const openBorrowModal = (book) => {
+    // ✅ لو مش logged in → نبعته لصفحة Login مع رسالة
     if (!auth.currentUser) {
       Swal.fire({
         title: "Login Required",
-        text: "Please sign in as a student to send a borrowing request.",
+        text: "Please sign in to borrow a book.",
         icon: "info",
+        confirmButtonText: "Sign In",
         confirmButtonColor: "#633a19",
+        showCancelButton: true,
+        cancelButtonText: "Cancel",
+      }).then((result) => {
+        if (result.isConfirmed) navigate("/login");
       });
       return;
     }
-    if (localStorage.getItem("role") === "admin") {
+
+    if (sessionStorage.getItem("role") === "admin") {
       Swal.fire({
         title: "Admin Account",
         text: "Borrowing requests are for students only. Use Borrowing Log instead.",
@@ -118,7 +126,9 @@ function LibraryHome() {
       });
       return;
     }
+
     if (unavailableBookIds.has(book.id)) return;
+
     if (myPendingBookIds.has(book.id)) {
       Swal.fire({
         title: "Request Pending",
@@ -128,6 +138,7 @@ function LibraryHome() {
       });
       return;
     }
+
     setBorrowDate(new Date().toISOString().split("T")[0]);
     setSelectedBook(book);
   };
@@ -226,7 +237,7 @@ function LibraryHome() {
             </h4>
             {!query.trim() && (
               <Link
-                to="/collection"
+                to="/catalog"
                 className="view-collection text-decoration-none fw-bold"
               >
                 View all collection{" "}
@@ -250,6 +261,10 @@ function LibraryHome() {
                           src={b.coverUrl}
                           alt={b.title}
                           className="w-100 h-100 object-fit-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://placehold.co/400x300?text=No+Cover";
+                          }}
                         />
                       </div>
                       <div className="p-3">
@@ -312,7 +327,7 @@ function LibraryHome() {
         </div>
       </div>
 
-      {/* ✅ Borrow Modal — zIndex 1055 to appear above Navbar (Bootstrap z-index: 1030) */}
+      {/* Borrow Modal */}
       {selectedBook && (
         <div
           className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center px-3"

@@ -308,7 +308,7 @@ function CreateAccount() {
             <div className="border-top m-4 p-3 text-center">
               Already have an account?{" "}
               <Link
-                to="/"
+                to="/login"
                 className="text-decoration-none fw-bold brown hover-links"
               >
                 Log in here

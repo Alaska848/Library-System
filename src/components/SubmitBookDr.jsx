@@ -17,7 +17,7 @@ function SubmitBookDr() {
   });
 
   // 🔒 Doctor فقط
-  if (localStorage.getItem("role") !== "doctor") {
+  if (sessionStorage.getItem("role") !== "doctor") {
     return (
       <div className="text-center mt-5">
         <h4 className="text-danger">Access Denied</h4>

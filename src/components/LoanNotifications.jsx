@@ -94,7 +94,7 @@ export default function LoanNotifications() {
   // ── Doctor book-request notifications ──────────────────────────────────
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (!user || localStorage.getItem("role") !== "doctor") return;
+      if (!user || sessionStorage.getItem("role") !== "doctor") return;
 
       const q = query(
         collection(db, "books"),
@@ -151,7 +151,7 @@ export default function LoanNotifications() {
       unsubLoanRef.current = null;
       initializedRef.current = false;
 
-      const appRole = localStorage.getItem("role");
+      const appRole = sessionStorage.getItem("role");
       if (!user || (appRole !== "user" && appRole !== "doctor")) return;
 
       const q = query(collection(db, "loans"), where("userId", "==", user.uid));
