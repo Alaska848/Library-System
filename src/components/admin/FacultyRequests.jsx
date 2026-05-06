@@ -37,7 +37,7 @@ function FacultyRequests() {
   }, []);
 
   // 🔒 Admin only
-  if (localStorage.getItem("role") !== "admin") {
+  if (sessionStorage.getItem("role") !== "admin") {
     return (
       <div className="text-center mt-5">
         <h4 className="text-danger">Access Denied</h4>
