@@ -15,6 +15,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import SubmitBookDr from "./components/SubmitBookDr";
 import FacultyRequests from "./components/admin/FacultyRequests";
 import UserProfile from './components/UserProfile';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 const router = createBrowserRouter([
   {
@@ -46,7 +47,14 @@ const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-
+{
+  path: "admin/dashboard",
+  element: (
+    <ProtectedRoute allowedRole="admin">
+      <AdminDashboard />
+    </ProtectedRoute>
+  ),
+},
           // صفحات الأدمن
           {
             path: "admin/BooksM",

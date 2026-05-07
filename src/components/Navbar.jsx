@@ -209,14 +209,19 @@ function Navbar() {
                   )}
 
                   {/* Admin */}
-                  {role === "admin" && (
-                    <>
-                      <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/BooksM" onClick={() => setIsopen(false)}>Books Management</NavLink>
-                      <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/BorrowingLog" onClick={() => setIsopen(false)}>Borrowing Log</NavLink>
-                      <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/UserManagement" onClick={() => setIsopen(false)}>User Management</NavLink>
-                      <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/FacultyRequests" onClick={() => setIsopen(false)}>Faculty Requests</NavLink>
-                    </>
-                  )}
+                 {/* Admin */}
+{role === "admin" && (
+  <>
+   
+   
+
+    <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/BooksM" onClick={() => setIsopen(false)}>Books Management</NavLink>
+    <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/BorrowingLog" onClick={() => setIsopen(false)}>Borrowing Log</NavLink>
+    <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/UserManagement" onClick={() => setIsopen(false)}>User Management</NavLink>
+     <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/dashboard" onClick={() => setIsopen(false)}>Dashboard</NavLink>
+    <NavLink className="nav-link m-1 text-white hover rounded-5 px-4" to="/admin/FacultyRequests" onClick={() => setIsopen(false)}>Faculty Requests</NavLink>
+  </>
+)}
                 </>
               )}
             </div>
