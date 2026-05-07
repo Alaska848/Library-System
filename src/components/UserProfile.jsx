@@ -397,7 +397,7 @@ function UserProfile() {
     : "—";
 
   const SIDEBAR = [
-    { icon:"fa-solid fa-gauge",             label:"Dashboard", action:()=>navigate("/home") },
+   
     { icon:"fa-solid fa-user",              label:"Profile",   action:()=>setActiveTab("profile") },
     { icon:"fa-solid fa-book-open",         label:"My Books",  action:()=>navigate("/my-borrowed-books") },
     { icon:"fa-solid fa-heart",             label:"Wishlist",  action:()=>setActiveTab("wishlist") },
