@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { auth, db } from "./firebase";
 import {
   onAuthStateChanged,
@@ -350,7 +350,9 @@ function UserProfile() {
   const [history,     setHistory]     = useState([]);
   const [wishlist,    setWishlist]    = useState([]);
   const [loading,     setLoading]     = useState(true);
-  const [activeTab,   setActiveTab]   = useState("profile");
+ const [searchParams, setSearchParams] = useSearchParams();
+const activeTab = searchParams.get("tab") || "profile";
+const setActiveTab = (tab) => setSearchParams({ tab });
   const [photoURL,    setPhotoURL]    = useState(null);
   const [uploading,   setUploading]   = useState(false);
   const [photoAlert,  setPhotoAlert]  = useState(null);
