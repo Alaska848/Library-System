@@ -8,14 +8,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 
-const statusStyle = {
-  Overdue: { background: "#FEE2E2", color: "#DC2626" },
-  Active: { background: "#DBEAFE", color: "#2563EB" },
-  Returned: { background: "#D1FAE5", color: "#059669" },
-  Pending: { background: "#FEF3C7", color: "#B45309" },
-  Rejected: { background: "#F3F4F6", color: "#6B7280" },
-};
-
 function dueDateFromLoanStart(loanDateStr) {
   if (!loanDateStr || loanDateStr === "—") {
     const d = new Date();
@@ -37,6 +29,7 @@ export default function BorrowingLog() {
   const [loans, setLoans] = useState([]);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
+  const [actionLoading, setActionLoading] = useState({});
 
   const showToast = (msg, color) => {
     setToast({ msg, color });
@@ -71,6 +64,7 @@ export default function BorrowingLog() {
 
   const handleReceive = async (id) => {
     const loan = loans.find((x) => x.id === id);
+    setActionLoading((p) => ({ ...p, [`receive_${id}`]: true }));
     try {
       await updateDoc(doc(db, "loans", id), { status: "Returned" });
       if (loan?.bookId) {
@@ -82,12 +76,15 @@ export default function BorrowingLog() {
     } catch (e) {
       console.error(e);
       showToast("Failed to update", "#DC2626");
+    } finally {
+      setActionLoading((p) => ({ ...p, [`receive_${id}`]: false }));
     }
   };
 
   const handleAccept = async (id) => {
     const loan = loans.find((x) => x.id === id);
     const due = dueDateFromLoanStart(loan?.loanDate);
+    setActionLoading((p) => ({ ...p, [`accept_${id}`]: true }));
     try {
       await updateDoc(doc(db, "loans", id), {
         status: "Active",
@@ -102,26 +99,34 @@ export default function BorrowingLog() {
     } catch (e) {
       console.error(e);
       showToast("Failed to accept", "#DC2626");
+    } finally {
+      setActionLoading((p) => ({ ...p, [`accept_${id}`]: false }));
     }
   };
 
   const handleReject = async (id) => {
+    setActionLoading((p) => ({ ...p, [`reject_${id}`]: true }));
     try {
       await updateDoc(doc(db, "loans", id), { status: "Rejected" });
       showToast("❌ Request Rejected (student notified)", "#DC2626");
     } catch (e) {
       console.error(e);
       showToast("Failed to reject", "#DC2626");
+    } finally {
+      setActionLoading((p) => ({ ...p, [`reject_${id}`]: false }));
     }
   };
 
   const handleRemoveLoan = async (id) => {
+    setActionLoading((p) => ({ ...p, [`remove_${id}`]: true }));
     try {
       await deleteDoc(doc(db, "loans", id));
       showToast("Removed from log", "#6B7280");
     } catch (e) {
       console.error(e);
       showToast("Failed to remove", "#DC2626");
+    } finally {
+      setActionLoading((p) => ({ ...p, [`remove_${id}`]: false }));
     }
   };
 
@@ -148,12 +153,14 @@ export default function BorrowingLog() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+
         <button type="button" style={s.registerBtn}>
           + Register New Loan
         </button>
       </div>
 
       <h1 style={s.pageTitle}>Lending Operations Log</h1>
+
       <p style={s.pageSubtitle}>
         Track and manage all current and archived book loans.
       </p>
@@ -166,6 +173,7 @@ export default function BorrowingLog() {
           </div>
           <span style={{ fontSize: 28 }}>🔄</span>
         </div>
+
         <div style={s.statCard}>
           <div>
             <div style={s.statLabel}>Overdue</div>
@@ -175,6 +183,7 @@ export default function BorrowingLog() {
           </div>
           <span style={{ fontSize: 28 }}>⚠️</span>
         </div>
+
         <div style={s.statCard}>
           <div>
             <div style={s.statLabel}>Returned</div>
@@ -184,6 +193,7 @@ export default function BorrowingLog() {
           </div>
           <span style={{ fontSize: 28 }}>✅</span>
         </div>
+
         <div style={{ ...s.statCard, border: "2px solid #FDE68A" }}>
           <div>
             <div style={s.statLabel}>Pending</div>
@@ -208,9 +218,11 @@ export default function BorrowingLog() {
               }}
             >
               {tab}
+
               {tab === "Pending" && stats.pending > 0 && (
                 <span style={s.tabBadge}>{stats.pending}</span>
               )}
+
               {tab === "Rejected" && stats.rejected > 0 && (
                 <span style={{ ...s.tabBadge, background: "#6B7280" }}>
                   {stats.rejected}
@@ -245,6 +257,7 @@ export default function BorrowingLog() {
               ))}
             </tr>
           </thead>
+
           <tbody>
             {filtered.length === 0 && (
               <tr>
@@ -260,6 +273,7 @@ export default function BorrowingLog() {
                 </td>
               </tr>
             )}
+
             {filtered.map((loan) => (
               <tr key={loan.id} style={s.tr}>
                 <td style={s.td}>
@@ -272,11 +286,13 @@ export default function BorrowingLog() {
                     >
                       {loan.initials || "?"}
                     </div>
+
                     <span style={loan.status === "Returned" ? s.strike : {}}>
                       {loan.borrower}
                     </span>
                   </div>
                 </td>
+
                 <td
                   style={{
                     ...s.td,
@@ -285,73 +301,138 @@ export default function BorrowingLog() {
                 >
                   {loan.book}
                 </td>
+
                 <td style={s.td}>{loan.loanDate}</td>
+
                 <td
                   style={{
                     ...s.td,
-                    color:
-                      loan.status === "Overdue" ? "#DC2626" : "inherit",
+                    color: loan.status === "Overdue" ? "#DC2626" : "inherit",
                     fontWeight: loan.status === "Overdue" ? 600 : 400,
                   }}
                 >
                   {loan.dueDate}
                 </td>
+
                 <td style={s.td}>
                   <span
-                    style={{
-                      ...s.badge,
-                      ...(statusStyle[loan.status] || {
-                        background: "#F3F4F6",
-                        color: "#374151",
-                      }),
-                    }}
+                    className={`px-3 py-1 rounded-full text-white text-sm ${
+                      loan.status === "Active"
+                        ? "bg-green-600"
+                        : loan.status === "Pending"
+                          ? "bg-yellow-500"
+                          : loan.status === "Rejected"
+                            ? "bg-red-600"
+                            : "bg-gray-600"
+                    }`}
                   >
                     {loan.status || "—"}
                   </span>
                 </td>
+
                 <td style={s.td}>
                   {loan.status === "Pending" && (
                     <div style={s.actionBtns}>
                       <button
                         type="button"
-                        style={s.acceptBtn}
+                        style={{
+                          ...s.acceptBtn,
+                          opacity: actionLoading[`accept_${loan.id}`] ? 0.7 : 1,
+                          minWidth: 72,
+                        }}
+                        disabled={
+                          actionLoading[`accept_${loan.id}`] ||
+                          actionLoading[`reject_${loan.id}`]
+                        }
                         onClick={() => handleAccept(loan.id)}
                       >
-                        ✓ Accept
+                        {actionLoading[`accept_${loan.id}`] ? (
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            style={{ width: 12, height: 12, borderWidth: 2 }}
+                          />
+                        ) : (
+                          "✓ Accept"
+                        )}
                       </button>
+
                       <button
                         type="button"
-                        style={s.rejectBtn}
+                        style={{
+                          ...s.rejectBtn,
+                          opacity: actionLoading[`reject_${loan.id}`] ? 0.7 : 1,
+                          minWidth: 72,
+                        }}
+                        disabled={
+                          actionLoading[`accept_${loan.id}`] ||
+                          actionLoading[`reject_${loan.id}`]
+                        }
                         onClick={() => handleReject(loan.id)}
                       >
-                        ✕ Reject
+                        {actionLoading[`reject_${loan.id}`] ? (
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            style={{ width: 12, height: 12, borderWidth: 2 }}
+                          />
+                        ) : (
+                          "✕ Reject"
+                        )}
                       </button>
                     </div>
                   )}
+
                   {(loan.status === "Active" || loan.status === "Overdue") && (
                     <div style={s.actionBtns}>
                       <button type="button" style={s.extendBtn}>
                         Extend
                       </button>
+
                       <button
                         type="button"
-                        style={s.receiveBtn}
+                        style={{
+                          ...s.receiveBtn,
+                          opacity: actionLoading[`receive_${loan.id}`]
+                            ? 0.7
+                            : 1,
+                          minWidth: 68,
+                        }}
+                        disabled={actionLoading[`receive_${loan.id}`]}
                         onClick={() => handleReceive(loan.id)}
                       >
-                        Receive
+                        {actionLoading[`receive_${loan.id}`] ? (
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            style={{ width: 12, height: 12, borderWidth: 2 }}
+                          />
+                        ) : (
+                          "Receive"
+                        )}
                       </button>
                     </div>
                   )}
+
                   {loan.status === "Returned" && (
                     <span style={{ color: "#059669", fontSize: 20 }}>✓</span>
                   )}
+
                   {loan.status === "Rejected" && (
                     <button
                       type="button"
-                      style={s.extendBtn}
+                      style={{
+                        ...s.extendBtn,
+                        opacity: actionLoading[`remove_${loan.id}`] ? 0.7 : 1,
+                      }}
+                      disabled={actionLoading[`remove_${loan.id}`]}
                       onClick={() => handleRemoveLoan(loan.id)}
                     >
-                      Remove
+                      {actionLoading[`remove_${loan.id}`] ? (
+                        <span
+                          className="spinner-border spinner-border-sm"
+                          style={{ width: 12, height: 12, borderWidth: 2 }}
+                        />
+                      ) : (
+                        "Remove"
+                      )}
                     </button>
                   )}
                 </td>
@@ -364,6 +445,7 @@ export default function BorrowingLog() {
           <span>
             Showing {filtered.length} of {loans.length} loans
           </span>
+
           <div style={s.pages}>
             {["‹", 1, 2, 3, "›"].map((p, i) => (
               <button
@@ -392,6 +474,7 @@ export default function BorrowingLog() {
             </div>
           </div>
         </div>
+
         <div style={s.infoCard}>
           <span style={s.infoIcon}>🔄</span>
           <div>
@@ -420,6 +503,7 @@ const s = {
     color: "#111827",
     minHeight: "100vh",
   },
+
   toast: {
     position: "fixed",
     top: 20,
@@ -432,12 +516,14 @@ const s = {
     fontSize: 14,
     boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
   },
+
   topBar: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 20,
   },
+
   search: {
     width: 340,
     padding: "8px 16px",
@@ -446,13 +532,21 @@ const s = {
     fontSize: 14,
     outline: "none",
   },
-  pageTitle: { fontSize: 26, fontWeight: 700, margin: 0, textAlign: "center" },
+
+  pageTitle: {
+    fontSize: 26,
+    fontWeight: 700,
+    margin: 0,
+    textAlign: "center",
+  },
+
   pageSubtitle: {
     color: "#6B7280",
     textAlign: "center",
     marginBottom: 20,
     marginTop: 6,
   },
+
   registerBtn: {
     background: "#92400E",
     color: "#fff",
@@ -464,7 +558,13 @@ const s = {
     fontSize: 14,
     cursor: "pointer",
   },
-  statsRow: { display: "flex", gap: 16, marginBottom: 24 },
+
+  statsRow: {
+    display: "flex",
+    gap: 16,
+    marginBottom: 24,
+  },
+
   statCard: {
     flex: 1,
     background: "#fff",
@@ -475,8 +575,18 @@ const s = {
     justifyContent: "space-between",
     boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
   },
-  statLabel: { fontSize: 13, color: "#6B7280", marginBottom: 4 },
-  statNumber: { fontSize: 28, fontWeight: 700 },
+
+  statLabel: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+
+  statNumber: {
+    fontSize: 28,
+    fontWeight: 700,
+  },
+
   tableCard: {
     background: "#fff",
     borderRadius: 12,
@@ -484,6 +594,7 @@ const s = {
     boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
     marginBottom: 20,
   },
+
   tabs: {
     display: "flex",
     gap: 4,
@@ -491,6 +602,7 @@ const s = {
     borderBottom: "1px solid #E5E7EB",
     flexWrap: "wrap",
   },
+
   tab: {
     background: "none",
     border: "none",
@@ -503,6 +615,7 @@ const s = {
     alignItems: "center",
     gap: 6,
   },
+
   tabActive: {
     background: "none",
     border: "none",
@@ -517,6 +630,7 @@ const s = {
     alignItems: "center",
     gap: 6,
   },
+
   tabBadge: {
     background: "#B45309",
     color: "#fff",
@@ -525,6 +639,7 @@ const s = {
     fontWeight: 700,
     padding: "1px 6px",
   },
+
   pendingBanner: {
     background: "#FFFBEB",
     border: "1px solid #FDE68A",
@@ -534,7 +649,12 @@ const s = {
     fontSize: 13,
     color: "#92400E",
   },
-  table: { width: "100%", borderCollapse: "collapse" },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+
   th: {
     textAlign: "left",
     fontSize: 11,
@@ -544,9 +664,23 @@ const s = {
     padding: "8px 12px",
     letterSpacing: "0.05em",
   },
-  tr: { borderTop: "1px solid #F3F4F6" },
-  td: { padding: "14px 12px", fontSize: 14, verticalAlign: "middle" },
-  borrowerCell: { display: "flex", alignItems: "center", gap: 10 },
+
+  tr: {
+    borderTop: "1px solid #F3F4F6",
+  },
+
+  td: {
+    padding: "14px 12px",
+    fontSize: 14,
+    verticalAlign: "middle",
+  },
+
+  borrowerCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+
   avatar: {
     width: 34,
     height: 34,
@@ -559,14 +693,17 @@ const s = {
     fontWeight: 700,
     flexShrink: 0,
   },
-  strike: { textDecoration: "line-through", color: "#9CA3AF" },
-  badge: {
-    padding: "3px 10px",
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
+
+  strike: {
+    textDecoration: "line-through",
+    color: "#9CA3AF",
   },
-  actionBtns: { display: "flex", gap: 6 },
+
+  actionBtns: {
+    display: "flex",
+    gap: 6,
+  },
+
   extendBtn: {
     background: "#fff",
     border: "1px solid #D1D5DB",
@@ -576,6 +713,7 @@ const s = {
     fontSize: 12,
     cursor: "pointer",
   },
+
   receiveBtn: {
     background: "#92400E",
     color: "#fff",
@@ -586,6 +724,7 @@ const s = {
     fontSize: 12,
     cursor: "pointer",
   },
+
   acceptBtn: {
     background: "#059669",
     color: "#fff",
@@ -597,6 +736,7 @@ const s = {
     cursor: "pointer",
     fontWeight: 600,
   },
+
   rejectBtn: {
     background: "#DC2626",
     color: "#fff",
@@ -608,6 +748,7 @@ const s = {
     cursor: "pointer",
     fontWeight: 600,
   },
+
   pagination: {
     display: "flex",
     justifyContent: "space-between",
@@ -616,7 +757,12 @@ const s = {
     fontSize: 13,
     color: "#6B7280",
   },
-  pages: { display: "flex", gap: 6 },
+
+  pages: {
+    display: "flex",
+    gap: 6,
+  },
+
   pageBtn: {
     width: 32,
     height: 32,
@@ -627,8 +773,19 @@ const s = {
     cursor: "pointer",
     fontSize: 13,
   },
-  pageBtnActive: { background: "#92400E", color: "#fff", border: "none" },
-  infoRow: { display: "flex", gap: 16, marginBottom: 24 },
+
+  pageBtnActive: {
+    background: "#92400E",
+    color: "#fff",
+    border: "none",
+  },
+
+  infoRow: {
+    display: "flex",
+    gap: 16,
+    marginBottom: 24,
+  },
+
   infoCard: {
     flex: 1,
     background: "#FFFBEB",
@@ -638,9 +795,24 @@ const s = {
     gap: 14,
     alignItems: "flex-start",
   },
-  infoIcon: { fontSize: 22, flexShrink: 0 },
-  infoTitle: { fontWeight: 700, fontSize: 14, marginBottom: 6 },
-  infoText: { fontSize: 13, color: "#6B7280", lineHeight: 1.5 },
+
+  infoIcon: {
+    fontSize: 22,
+    flexShrink: 0,
+  },
+
+  infoTitle: {
+    fontWeight: 700,
+    fontSize: 14,
+    marginBottom: 6,
+  },
+
+  infoText: {
+    fontSize: 13,
+    color: "#6B7280",
+    lineHeight: 1.5,
+  },
+
   footer: {
     textAlign: "center",
     fontSize: 12,

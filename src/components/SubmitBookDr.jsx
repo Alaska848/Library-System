@@ -15,6 +15,7 @@ function SubmitBookDr() {
     date: "",
     cover: null,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   // 🔒 Doctor فقط
   if (sessionStorage.getItem("role") !== "doctor") {
@@ -37,7 +38,7 @@ function SubmitBookDr() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setIsLoading(true);
     try {
       await addDoc(collection(db, "books"), {
         title: form.title,
@@ -76,15 +77,26 @@ function SubmitBookDr() {
     } catch (err) {
       console.error(err);
       Swal.fire("Error", err.message, "error");
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-    const categories = [
-                "Philosophy", "History", "Science", "Mathematics",
-                "Computer Science", "Literature", "Engineering",
-                "Business", "Psychology", "Art", "Medicine",
-                "Economics", "Law"
-                ];
+
+  const categories = [
+    "Philosophy",
+    "History",
+    "Science",
+    "Mathematics",
+    "Computer Science",
+    "Literature",
+    "Engineering",
+    "Business",
+    "Psychology",
+    "Art",
+    "Medicine",
+    "Economics",
+    "Law",
+  ];
 
   return (
     <div className="container mt-5 py-5">
@@ -138,28 +150,30 @@ function SubmitBookDr() {
 
             {/* Category */}
             <div className="col-md-6">
-                  <label htmlFor="category" className="brown">Category</label>
-                  <select
-                    id="category"
-                    name="category"
-                    className="form-control mb-3"
-                    required
-                    defaultValue=""
-                  >
-                    <option value="" disabled>Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <label htmlFor="category" className="brown">
+                Category
+              </label>
+              <select
+                id="category"
+                name="category"
+                className="form-control mb-3"
+                required
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Select a category
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Lending Type */}
             <div className="col-md-6">
-              <label className="fw-semibold d-block mb-2">
-                Lending Type
-              </label>
+              <label className="fw-semibold d-block mb-2">Lending Type</label>
               <div className="d-flex gap-3">
                 <label>
                   <input
@@ -197,19 +211,18 @@ function SubmitBookDr() {
 
             {/* Status */}
             <div className="col-md-6">
-              <label className="fw-semibold d-block mb-2">
-                Book Status
-              </label>
+              <label className="fw-semibold d-block mb-2">Book Status</label>
               <div className="d-flex gap-2">
                 {["Used", "Good", "New"].map((s) => (
                   <button
                     type="button"
                     key={s}
                     onClick={() => setForm({ ...form, status: s })}
-                    className={`btn ${form.status === s
+                    className={`btn ${
+                      form.status === s
                         ? "bg-brown text-white"
                         : "btn-outline-secondary"
-                      }`}
+                    }`}
                   >
                     {s}
                   </button>
@@ -243,8 +256,22 @@ function SubmitBookDr() {
 
           {/* Buttons */}
           <div className="d-flex gap-3 mt-4">
-            <button className="bg-brown text-white px-4 py-2 rounded-2 border-0 hover">
-              Submit Request
+            <button
+              disabled={isLoading}
+              className="bg-brown text-white px-4 py-2 rounded-2 border-0 hover"
+              style={{ opacity: isLoading ? 0.8 : 1, minWidth: 140 }}
+            >
+              {isLoading ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    style={{ width: 14, height: 14, borderWidth: 2 }}
+                  />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Request"
+              )}
             </button>
             <button
               type="button"

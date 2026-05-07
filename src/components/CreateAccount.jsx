@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import Swal from "sweetalert2";
+import { toast } from "react-toastify";
 
 function CreateAccount() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ function CreateAccount() {
   const [name, setName] = useState("");
   const [Userid, setUserid] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [accountType, setAccountType] = useState("student");
@@ -18,6 +20,7 @@ function CreateAccount() {
   const [confirmTouched, setConfirmTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const doPasswordsMatch =
     password.length > 0 &&
@@ -33,6 +36,7 @@ function CreateAccount() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const cleanedEmail = email.trim().toLowerCase();
 
     if (
@@ -40,17 +44,18 @@ function CreateAccount() {
       !cleanedEmail.endsWith(".edu") &&
       !cleanedEmail.endsWith(".edu.eg")
     ) {
-      Swal.fire({
-        title: "Invalid Email",
-        text: "Please use your university email (.edu or .edu.eg)",
-        icon: "error",
-        confirmButtonColor: "#633a19",
-      });
+      toast.error("Please use your university email (.edu or .edu.eg)");
       return;
     }
 
     setConfirmTouched(true);
-    if (password !== confirmPassword) return;
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       const cred = await createUserWithEmailAndPassword(
@@ -60,16 +65,22 @@ function CreateAccount() {
       );
 
       const collectionName = accountType === "doctor" ? "doctors" : "students";
+
       await setDoc(doc(db, collectionName, cred.user.uid), {
-        name,
-        Userid,
+        name: name.trim(),
+        Userid: Userid.trim(),
         email: cleanedEmail,
+        phone: phone.trim(),
         role: accountType,
+        status: "active",
+        createdAt: serverTimestamp(),
       });
 
       await auth.signOut();
 
-      Swal.fire({
+      toast.success("Account created successfully");
+
+      await Swal.fire({
         title: "Account Created!",
         text: "Your account has been created successfully. You can now log in.",
         icon: "success",
@@ -79,13 +90,18 @@ function CreateAccount() {
       navigate("/login");
     } catch (error) {
       console.log(error);
-      Swal.fire({
+
+      toast.error(error.message);
+
+      await Swal.fire({
         title: "INVALID INFORMATION!",
         text: error.message,
         icon: "warning",
         confirmButtonText: "Ok",
         confirmButtonColor: "#633a19",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -101,21 +117,24 @@ function CreateAccount() {
             </p>
 
             <div className="px-4 mb-2">
-              <Link to="/" className="text-decoration-none brown fw-semibold small">
+              <Link
+                to="/"
+                className="text-decoration-none brown fw-semibold small"
+              >
                 <i className="fa-solid fa-arrow-left me-1"></i> Back to Home
               </Link>
             </div>
 
             <form onSubmit={handleSubmit} className="row g-3 mb-4 px-4">
-              {/* Account Type */}
               <div className="col-md-12">
                 <label className="form-label colorgray">Account Type</label>
+
                 <div className="d-flex gap-3">
                   <div
-                    onClick={() => setAccountType("student")}
+                    onClick={() => !isLoading && setAccountType("student")}
                     className="flex-fill border rounded-3 p-3 text-center"
                     style={{
-                      cursor: "pointer",
+                      cursor: isLoading ? "not-allowed" : "pointer",
                       borderColor:
                         accountType === "student" ? "#633a19" : "#dee2e6",
                       background:
@@ -140,11 +159,12 @@ function CreateAccount() {
                       Student
                     </div>
                   </div>
+
                   <div
-                    onClick={() => setAccountType("doctor")}
+                    onClick={() => !isLoading && setAccountType("doctor")}
                     className="flex-fill border rounded-3 p-3 text-center"
                     style={{
-                      cursor: "pointer",
+                      cursor: isLoading ? "not-allowed" : "pointer",
                       borderColor:
                         accountType === "doctor" ? "#633a19" : "#dee2e6",
                       background: accountType === "doctor" ? "#fdf5ef" : "#fff",
@@ -184,6 +204,7 @@ function CreateAccount() {
                   }
                   required
                   value={name}
+                  disabled={isLoading}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
@@ -199,6 +220,7 @@ function CreateAccount() {
                   placeholder="e.g. 12345678"
                   required
                   value={Userid}
+                  disabled={isLoading}
                   onChange={(e) => setUserid(e.target.value)}
                 />
               </div>
@@ -218,6 +240,7 @@ function CreateAccount() {
                   }
                   required
                   value={email}
+                  disabled={isLoading}
                   onChange={(e) => setEmail(e.target.value)}
                   pattern={
                     accountType === "student"
@@ -229,6 +252,22 @@ function CreateAccount() {
                       ? "Please enter a valid university email (.edu or .edu.eg)"
                       : undefined
                   }
+                />
+              </div>
+
+              <div className="col-md-12">
+                <label htmlFor="phone" className="form-label colorgray">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  id="phone"
+                  placeholder="e.g. 01012345678"
+                  required
+                  value={phone}
+                  disabled={isLoading}
+                  onChange={(e) => setPhone(e.target.value)}
                 />
               </div>
 
@@ -246,16 +285,19 @@ function CreateAccount() {
                   placeholder="******"
                   required
                   value={password}
+                  disabled={isLoading}
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <i
-                  className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"}`}
-                  onClick={() => setShowPassword(!showPassword)}
+                  className={`fa-solid ${
+                    showPassword ? "fa-eye-slash" : "fa-eye"
+                  }`}
+                  onClick={() => !isLoading && setShowPassword(!showPassword)}
                   style={{
                     position: "absolute",
                     right: "30px",
                     top: "65%",
-                    cursor: "pointer",
+                    cursor: isLoading ? "not-allowed" : "pointer",
                     color: "#6c757d",
                   }}
                 />
@@ -270,25 +312,37 @@ function CreateAccount() {
                 </label>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  className={`form-control pe-5 ${showConfirmInvalid ? "is-invalid" : showConfirmValid ? "is-valid" : ""}`}
+                  className={`form-control pe-5 ${
+                    showConfirmInvalid
+                      ? "is-invalid"
+                      : showConfirmValid
+                        ? "is-valid"
+                        : ""
+                  }`}
                   id="confirmPassword"
                   placeholder="******"
                   required
                   value={confirmPassword}
+                  disabled={isLoading}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   onBlur={() => setConfirmTouched(true)}
                 />
                 <i
-                  className={`fa-solid ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"}`}
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className={`fa-solid ${
+                    showConfirmPassword ? "fa-eye-slash" : "fa-eye"
+                  }`}
+                  onClick={() =>
+                    !isLoading && setShowConfirmPassword(!showConfirmPassword)
+                  }
                   style={{
                     position: "absolute",
                     right: "30px",
                     top: "43%",
-                    cursor: "pointer",
+                    cursor: isLoading ? "not-allowed" : "pointer",
                     color: "#6c757d",
                   }}
                 />
+
                 {!showConfirmInvalid && !showConfirmValid && (
                   <div className="mt-2">Passwords must match.</div>
                 )}
@@ -305,8 +359,26 @@ function CreateAccount() {
               </div>
 
               <div className="col-12 mx-auto">
-                <button className="p-2 py-3 rounded-4 border-0 mb-2 text-nowrap text-white fw-bold bh1 w-100 bg-brown hover shadow">
-                  Create Account
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="p-2 py-3 rounded-4 border-0 mb-2 text-nowrap text-white fw-bold bh1 w-100 bg-brown hover shadow"
+                  style={{
+                    opacity: isLoading ? 0.8 : 1,
+                    cursor: isLoading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isLoading ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        style={{ width: 16, height: 16, borderWidth: 2 }}
+                      />
+                      Creating Account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
                 </button>
               </div>
             </form>
@@ -333,6 +405,7 @@ function CreateAccount() {
                 manuscripts, and academic textbooks.
               </p>
             </div>
+
             <div className="container d-flex flex-column p-4">
               <span className="text-white mb-2">
                 <i className="fa-solid fa-check-circle me-2" />
