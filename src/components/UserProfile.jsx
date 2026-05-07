@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
 import {
   onAuthStateChanged,
@@ -9,8 +9,8 @@ import {
   reauthenticateWithCredential,
 } from "firebase/auth";
 import {
-  doc, getDoc, getDocs, updateDoc,
-  collection, query, where,
+  doc, getDoc, getDocs, updateDoc, deleteDoc,
+  collection, query, where, onSnapshot,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -246,14 +246,36 @@ function SettingsPanel({ userData, authUser }) {
 }
 
 // ─── Wishlist Panel ───────────────────────────────────────────────────────────
-function WishlistPanel({ wishlist, onRemove }) {
-  if (wishlist.length===0) return (
+function WishlistPanel({ userId }) {
+  const [wishlist, setWishlist] = useState([]);
+  const [removing, setRemoving] = useState({});
+
+  useEffect(() => {
+    if (!userId) return;
+    const q = query(collection(db, "wishlists"), where("userId", "==", userId));
+    const unsub = onSnapshot(q, (snap) => {
+      const items = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+      items.sort((a, b) => (b.addedAt?.toMillis?.() || 0) - (a.addedAt?.toMillis?.() || 0));
+      setWishlist(items);
+    });
+    return () => unsub();
+  }, [userId]);
+
+  const handleRemove = async (docId) => {
+    setRemoving(p => ({ ...p, [docId]: true }));
+    try { await deleteDoc(doc(db, "wishlists", docId)); }
+    catch (e) { console.error(e); }
+    finally { setRemoving(p => ({ ...p, [docId]: false })); }
+  };
+
+  if (wishlist.length === 0) return (
     <div style={{ background:"#fff",borderRadius:16,padding:"40px 24px",boxShadow:"0 2px 12px rgba(0,0,0,0.06)",textAlign:"center",color:"#9ca3af" }}>
       <i className="fa-solid fa-heart" style={{ fontSize:36,marginBottom:14,display:"block" }}/>
       <p style={{ fontSize:15 }}>Your wishlist is empty</p>
       <Link to="/catalog" className="btn btn-sm rounded-pill px-4" style={{ background:"#633a19",color:"#fff",fontSize:13,textDecoration:"none" }}>Browse Catalog</Link>
     </div>
   );
+
   return (
     <div style={{ background:"#fff",borderRadius:16,padding:"28px 32px",boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
       <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:24 }}>
@@ -262,20 +284,30 @@ function WishlistPanel({ wishlist, onRemove }) {
         <span style={{ background:"rgba(99,58,25,0.1)",color:"#633a19",borderRadius:20,fontSize:12,fontWeight:700,padding:"2px 10px" }}>{wishlist.length}</span>
       </div>
       <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
-        {wishlist.map((w,i)=>(
-          <div key={i} style={{ display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1px solid #f0ece6",background:"#fdf9f6" }}>
-            <div style={{ width:52,height:70,borderRadius:6,flexShrink:0,background:"linear-gradient(135deg,#9e734a,#633a19)",display:"flex",alignItems:"center",justifyContent:"center" }}>
-              <i className="fa-solid fa-book" style={{ color:"rgba(255,255,255,0.7)",fontSize:18 }}/>
-            </div>
+        {wishlist.map((w) => (
+          <div key={w.docId} style={{ display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1px solid #f0ece6",background:"#fdf9f6" }}>
+            {w.coverUrl
+              ? <img src={w.coverUrl} alt={w.title} style={{ width:52,height:70,borderRadius:6,objectFit:"cover",flexShrink:0 }}
+                  onError={e=>{e.target.onerror=null;e.target.src="https://placehold.co/52x70?text=📖";}}/>
+              : <div style={{ width:52,height:70,borderRadius:6,flexShrink:0,background:"linear-gradient(135deg,#9e734a,#633a19)",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                  <i className="fa-solid fa-book" style={{ color:"rgba(255,255,255,0.7)",fontSize:18 }}/>
+                </div>
+            }
             <div style={{ flex:1,minWidth:0 }}>
-              <div style={{ fontWeight:700,fontSize:15,color:"#1f2937" }}>{w.title}</div>
+              <div style={{ fontWeight:700,fontSize:15,color:"#1f2937",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{w.title}</div>
               <div style={{ fontSize:13,color:"#6b7280" }}>{w.author}</div>
-              <div style={{ fontSize:12,fontWeight:600,marginTop:4,color:w.available?"#16a34a":"#f59e0b" }}>{w.available?"Available Now":"Not Available"}</div>
+              <div style={{ fontSize:12,fontWeight:600,marginTop:4,color:w.available?"#16a34a":"#f59e0b" }}>
+                {w.available ? "Available Now" : "Not Available"}
+              </div>
             </div>
             <div style={{ display:"flex",gap:8,flexShrink:0 }}>
               <Link to="/catalog" style={{ background:"#633a19",color:"#fff",borderRadius:8,fontSize:12,fontWeight:600,padding:"6px 14px",textDecoration:"none" }}>Borrow</Link>
-              <button onClick={()=>onRemove(i)} style={{ background:"#fee2e2",color:"#ef4444",border:"none",borderRadius:8,fontSize:12,fontWeight:600,padding:"6px 10px",cursor:"pointer" }}>
-                <i className="fa-solid fa-trash"/>
+              <button onClick={() => handleRemove(w.docId)} disabled={removing[w.docId]}
+                style={{ background:"#fee2e2",color:"#ef4444",border:"none",borderRadius:8,fontSize:12,fontWeight:600,padding:"6px 10px",cursor:"pointer" }}>
+                {removing[w.docId]
+                  ? <span className="spinner-border spinner-border-sm" style={{ width:12,height:12,borderWidth:2 }}/>
+                  : <i className="fa-solid fa-trash"/>
+                }
               </button>
             </div>
           </div>
@@ -318,9 +350,7 @@ function UserProfile() {
   const [history,     setHistory]     = useState([]);
   const [wishlist,    setWishlist]    = useState([]);
   const [loading,     setLoading]     = useState(true);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "profile";
-  const setActiveTab = (tab) => setSearchParams({ tab });
+  const [activeTab,   setActiveTab]   = useState("profile");
   const [photoURL,    setPhotoURL]    = useState(null);
   const [uploading,   setUploading]   = useState(false);
   const [photoAlert,  setPhotoAlert]  = useState(null);
@@ -397,7 +427,7 @@ function UserProfile() {
     : "—";
 
   const SIDEBAR = [
-   
+    { icon:"fa-solid fa-gauge",             label:"Dashboard", action:()=>navigate("/home") },
     { icon:"fa-solid fa-user",              label:"Profile",   action:()=>setActiveTab("profile") },
     { icon:"fa-solid fa-book-open",         label:"My Books",  action:()=>navigate("/my-borrowed-books") },
     { icon:"fa-solid fa-heart",             label:"Wishlist",  action:()=>setActiveTab("wishlist") },
@@ -560,7 +590,7 @@ function UserProfile() {
               </>
             )}
 
-            {activeTab==="wishlist"  && <WishlistPanel wishlist={wishlist} onRemove={i=>setWishlist(p=>p.filter((_,j)=>j!==i))}/>}
+            {activeTab==="wishlist"  && <WishlistPanel userId={authUser?.uid}/>}
             {activeTab==="history"   && <HistoryPanel history={history}/>}
             {activeTab==="settings"  && authUser && <SettingsPanel userData={userData} authUser={authUser}/>}
           </div>
