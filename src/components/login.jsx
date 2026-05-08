@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import Swal from "sweetalert2";
 import LoadingOverlay from "./LoadingOverlay";
@@ -72,19 +72,16 @@ function Login() {
         if (studentData.suspended === true || studentStatus === "suspended") {
           await signOut(auth);
           sessionStorage.clear();
-
           await showSuspendedPopup(
             studentData.suspendedReason ||
               "Your account has been suspended please contact the admin",
           );
-
           return;
         }
 
         if (studentStatus !== "active") {
           await signOut(auth);
           sessionStorage.clear();
-
           await Swal.fire({
             title: "Account Not Active",
             text: "Your account is not active. Please contact the library administration.",
@@ -92,7 +89,6 @@ function Login() {
             confirmButtonText: "Ok",
             confirmButtonColor: "#633a19",
           });
-
           return;
         }
 
@@ -100,6 +96,11 @@ function Login() {
         window.dispatchEvent(new Event("roleChanged"));
 
         const isNew = !studentData.lastLogin;
+
+        // ✅ تحديث lastLogin
+        await updateDoc(doc(db, "students", uid), {
+          lastLogin: serverTimestamp(),
+        });
 
         await Swal.fire({
           title: isNew
@@ -130,26 +131,22 @@ function Login() {
         if (doctorData.suspended === true || doctorStatus === "suspended") {
           await signOut(auth);
           sessionStorage.clear();
-
           await showSuspendedPopup(
             doctorData.suspendedReason ||
               "Your account has been suspended please contact the admin",
           );
-
           return;
         }
 
         if (doctorStatus !== "active") {
           await signOut(auth);
           sessionStorage.clear();
-
           await Swal.fire({
             title: "Access Denied",
             text: "Your account is not active.",
             icon: "error",
             confirmButtonColor: "#633a19",
           });
-
           return;
         }
 
@@ -157,6 +154,11 @@ function Login() {
         window.dispatchEvent(new Event("roleChanged"));
 
         const isNewDoc = !doctorData.lastLogin;
+
+        // ✅ تحديث lastLogin
+        await updateDoc(doc(db, "doctors", uid), {
+          lastLogin: serverTimestamp(),
+        });
 
         await Swal.fire({
           title: isNewDoc
@@ -186,6 +188,9 @@ function Login() {
         confirmButtonColor: "#633a19",
       });
     } catch (error) {
+      setIsLoading(false);
+      console.error("Login error:", error);
+
       await Swal.fire({
         title: "INVALID LOGIN",
         text: "Try Again",
