@@ -77,21 +77,26 @@ function BooksM() {
         return;
       }
 
-      const imageFormData = new FormData();
-      imageFormData.append("image", image);
+     const imageFormData = new FormData();
+     imageFormData.append("file", image);
+     imageFormData.append("upload_preset", "library-system");
 
-      imageFormData.append("upload_preset", "library-system");
+     const res = await fetch(
+       "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
+       {
+         method: "POST",
+         body: imageFormData,
+       },
+     );
 
-      const res = await fetch(
-        "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
-        {
-          method: "POST",
-          body: imageFormData,
-        },
-      );
+     const data = await res.json();
+     console.log("Cloudinary response:", data);
 
-      const data = await res.json();
-      const coverUrl = data.secure_url;
+     if (!res.ok || !data.secure_url) {
+       throw new Error(data.error?.message || "Image upload failed");
+     }
+
+     const coverUrl = data.secure_url;
 
       await addDoc(booksCollection, {
         title,
