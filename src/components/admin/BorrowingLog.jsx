@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
+import logger from "../../utils/logger";
 import {
   collection,
   deleteDoc,
@@ -300,7 +301,7 @@ export default function BorrowingLog() {
   };
 
   const handleSuspendStudent = async (loan) => {
-    console.log("FUNCTION STARTED", loan);
+    logger.log("BorrowingLog", loan);
 
     setActionLoading((p) => ({ ...p, [`suspend_${loan.id}`]: true }));
 
@@ -897,7 +898,7 @@ export default function BorrowingLog() {
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  console.log("SUSPEND BUTTON PRESSED", loan);
+                                  logger.log("BorrowingLog", `Suspend button: ${loan.id}`);
                                   handleSuspendStudent(loan);
                                 }}
                               >

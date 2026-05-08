@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
+import logger from "../utils/logger";
 import { getBorrowerDisplayName } from "./borrowerDisplayName";
 import {
   addDoc,
@@ -116,7 +117,7 @@ function LibraryHome() {
     : allBooks;
 
   const toggleWishlist = async (book) => {
-    console.log("current user:", auth.currentUser);
+    logger.log("LibraryHome", auth.currentUser);
     if (!uid) {
       Swal.fire({
         title: "Login Required",

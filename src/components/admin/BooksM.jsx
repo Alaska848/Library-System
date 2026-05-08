@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
+import logger from "../../utils/logger";
 import { updateDoc } from "firebase/firestore";
 import {
   addDoc,
@@ -90,7 +91,7 @@ function BooksM() {
      );
 
      const data = await res.json();
-     console.log("Cloudinary response:", data);
+     logger.log("BooksM", data);
 
      if (!res.ok || !data.secure_url) {
        throw new Error(data.error?.message || "Image upload failed");
@@ -113,7 +114,7 @@ function BooksM() {
       setImage(null);
       e.target.reset();
     } catch (error) {
-      console.log(error);
+      logger.error("BooksM", error);
       alert(error.message);
     } finally {
       setLoading(false);
@@ -129,7 +130,7 @@ function BooksM() {
     try {
       await deleteDoc(doc(db, "books", book.id));
     } catch (error) {
-      console.log(error);
+      logger.error("BooksM", error);
       alert("Error deleting book");
     }
   };
@@ -161,7 +162,7 @@ function BooksM() {
       });
       setEditingBook(null);
     } catch (error) {
-      console.log(error);
+      logger.error("BooksM", error);
       alert("Error updating book");
     } finally {
       setLoading(false);

@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ✅ الدالات المساعدة
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+    
+    function isDoctor() {
+      return isAuthenticated() && getAfterData().role == "doctor";
+    }
+    
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+    
+    function getAfterData() {
+      return request.resource.data;
+    }
+    
+    // ✅ Collections
+    
+    // 📚 Books collection - قراءة عامة، كتابة للأدمن فقط
+    match /books/{document=**} {
+      allow read: if true; // الكل بيقرأ
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // 👥 Users collection
+    match /users/{userId} {
+      // الكل بيقرأ البيانات الأساسية (name, role، وليس password/email)
+      allow read: if isAuthenticated();
+      
+      // المستخدم بيعدل بيانات حسابه
+      allow update: if isOwner(userId) && 
+        !("role" in request.resource.data) && // لا يمكن تغيير الـ role من الفرونت
+        !("email" in request.resource.data); // لا يمكن تغيير الإيميل من هنا
+      
+      // الأدمن بيقدر يغير أي حاجة
+      allow write: if isAdmin();
+      
+      // ينشئ حسابه الخاص عند التسجيل
+      allow create: if isOwner(userId) && request.resource.data.role == "user";
+    }
+    
+    // 📋 Loans collection - الإعارات
+    match /loans/{loanId} {
+      // قراءة: المستخدم بتاع الإعارة أو الأدمن
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // الكتابة: الأدمن فقط (والمستخدم ينشئ طلب)
+      allow create: if isAuthenticated() && (
+        (request.resource.data.userId == request.auth.uid && 
+         request.resource.data.status == "pending") ||
+        isAdmin()
+      );
+      
+      allow update: if isAdmin() || (
+        isOwner(resource.data.userId) && 
+        request.resource.data.status == "returned"
+      );
+      
+      allow delete: if isAdmin();
+    }
+    
+    // 🔖 Wishlists collection
+    match /wishlists/{userId}/{document=**} {
+      // المستخدم بيشتغل على wishlist تاعه
+      allow read, write: if isOwner(userId);
+      
+      // الأدمن بيقدر يقرأ (للإحصائيات)
+      allow read: if isAdmin();
+    }
+    
+    // ⭐ Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if true; // الكل بيقرأ التقييمات
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      allow update, delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+    
+    // 📤 Faculty Requests (طلبات الدكاترة)
+    match /facultyRequests/{requestId} {
+      allow read: if isAdmin() || (
+        isAuthenticated() && resource.data.userId == request.auth.uid
+      );
+      
+      allow create: if isDoctor() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      allow update: if isAdmin() || (
+        isOwner(resource.data.userId) && 
+        resource.data.status == "pending"
+      );
+      
+      allow delete: if isAdmin();
+    }
+    
+    // 📊 Admins collection (optional - للتحقق من الصلاحيات)
+    match /admins/{userId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // 🔐 عام: اسمح بالوصول إلى أي collection أخرى للأدمن فقط
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

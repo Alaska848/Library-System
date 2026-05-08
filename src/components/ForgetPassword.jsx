@@ -1,6 +1,7 @@
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "./firebase";
 import { useState } from "react";
+import logger from "../utils/logger";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -21,7 +22,7 @@ function ForgetPassword() {
       return;
     }
 
-    console.log(cleanedEmail);
+    logger.log("ForgetPassword", cleanedEmail);
     setIsLoading(true);
     try {
       await sendPasswordResetEmail(auth, cleanedEmail);
@@ -35,7 +36,7 @@ function ForgetPassword() {
       });
       setEmail("");
     } catch (error) {
-      console.log(error.code, error.message);
+      logger.error("ForgetPassword", error);
 
       if (error.code === "auth/user-not-found") {
         Swal.fire({
