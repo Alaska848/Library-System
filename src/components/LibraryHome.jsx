@@ -8,6 +8,10 @@ import {
   getDocs,
   onSnapshot,
   serverTimestamp,
+  doc,
+  deleteDoc,
+  query as firestoreQuery,
+  where,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import Swal from "sweetalert2";
@@ -44,6 +48,8 @@ function LibraryHome() {
   const [unavailableBookIds, setUnavailableBookIds] = useState(() => new Set());
   const [myPendingBookIds, setMyPendingBookIds] = useState(() => new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [wishlistMap, setWishlistMap] = useState({});
+  const [wishlistLoading, setWishlistLoading] = useState({});
 
   const navigate = useNavigate();
 
@@ -51,6 +57,17 @@ function LibraryHome() {
     const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!uid) { setWishlistMap({}); return; }
+    const q = firestoreQuery(collection(db, "wishlists"), where("userId", "==", uid));
+    const unsub = onSnapshot(q, (snap) => {
+      const map = {};
+      snap.forEach((d) => { map[d.data().bookId] = d.id; });
+      setWishlistMap(map);
+    });
+    return () => unsub();
+  }, [uid]);
 
   useEffect(() => {
     getDocs(collection(db, "books"))
@@ -97,6 +114,39 @@ function LibraryHome() {
         b.isbn?.toLowerCase().includes(query.toLowerCase()),
     )
     : allBooks;
+
+  const toggleWishlist = async (book) => {
+    if (!uid) {
+      Swal.fire({
+        title: "Login Required",
+        text: "Please sign in to add to wishlist.",
+        icon: "info",
+        confirmButtonText: "Sign In",
+        confirmButtonColor: "#633a19",
+        showCancelButton: true,
+        cancelButtonText: "Cancel",
+      }).then((r) => { if (r.isConfirmed) navigate("/login"); });
+      return;
+    }
+    setWishlistLoading((p) => ({ ...p, [book.id]: true }));
+    try {
+      if (wishlistMap[book.id]) {
+        await deleteDoc(doc(db, "wishlists", wishlistMap[book.id]));
+      } else {
+        await addDoc(collection(db, "wishlists"), {
+          userId: uid,
+          bookId: book.id,
+          title: book.title || "",
+          author: book.author || "",
+          category: book.category || "",
+          coverUrl: book.coverUrl || "",
+          available: !unavailableBookIds.has(book.id),
+          addedAt: serverTimestamp(),
+        });
+      }
+    } catch (err) { console.error(err); }
+    finally { setWishlistLoading((p) => ({ ...p, [book.id]: false })); }
+  };
 
   const handleSearch = (e) => e.preventDefault();
 
@@ -255,7 +305,31 @@ function LibraryHome() {
                 const myPending = myPendingBookIds.has(b.id);
                 return (
                   <div key={b.id} className="col-12 col-sm-6 col-lg-3">
-                    <div className="card border-0 rounded-4 shadow h-100 overflow-hidden">
+                    <div className="card border-0 rounded-4 shadow h-100 overflow-hidden" style={{ position: "relative" }}>
+
+                      {/* ❤ زرار الـ Wishlist */}
+                      <button
+                        onClick={() => toggleWishlist(b)}
+                        disabled={!!wishlistLoading[b.id]}
+                        title={wishlistMap[b.id] ? "Remove from wishlist" : "Add to wishlist"}
+                        style={{
+                          position: "absolute", top: 10, right: 10, zIndex: 2,
+                          width: 34, height: 34, borderRadius: "50%",
+                          background: "rgba(255,255,255,0.92)",
+                          border: "none", cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                          transition: "transform 0.15s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.15)"}
+                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                      >
+                        {wishlistLoading[b.id]
+                          ? <span className="spinner-border spinner-border-sm" style={{ width: 14, height: 14, borderWidth: 2, color: "#633a19" }} />
+                          : <i className={wishlistMap[b.id] ? "fa-solid fa-heart" : "fa-regular fa-heart"}
+                              style={{ fontSize: 16, color: wishlistMap[b.id] ? "#ef4444" : "#9ca3af" }} />
+                        }
+                      </button>
                       <div className="library-card-img">
                         <img
                           src={b.coverUrl}

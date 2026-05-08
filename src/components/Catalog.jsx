@@ -198,7 +198,7 @@ function Catalog() {
   }
 
   return (
-    <div className="container py-4 mt-5">
+    <div className="container-fluid py-4 mt-5" style={{ maxWidth: 1200 }}>
       <h2 className="fw-bolder mb-3">Book Catalog</h2>
 
       {/* Search */}

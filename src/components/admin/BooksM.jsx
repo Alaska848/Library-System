@@ -207,7 +207,7 @@ function BooksM() {
           className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
         >
-          <div className="bg-white p-5 rounded-4 shadow w-75">
+          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "90%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" }}>
             <h1 className="fw-bold brown border-bottom pb-3 mb-3">
               Add New Book
             </h1>
@@ -331,7 +331,7 @@ function BooksM() {
           className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
         >
-          <div className="bg-white p-5 rounded-4 shadow w-75">
+          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "90%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" }}>
             <h1 className="fw-bold brown border-bottom pb-3 mb-3">Edit Book</h1>
 
             <form onSubmit={handleEditSave}>
@@ -439,7 +439,7 @@ function BooksM() {
               ))}
             </div>
 
-            <div className="position-relative" style={{ minWidth: "280px" }}>
+            <div className="position-relative w-100" style={{ maxWidth: "320px" }}>
               <input
                 type="text"
                 className="form-control pe-5"
@@ -467,54 +467,44 @@ function BooksM() {
                 <p className="font-medium brown">No books match your search</p>
               </div>
             ) : (
-              <div>
-                <div className="d-flex px-3 mb-3 text-center fw-bold border-bottom pb-3">
-                  <div className="col">BOOK</div>
-                  <div className="col">AUTHOR</div>
-                  <div className="col">CATEGORY</div>
-                  <div className="col">STATUS</div>
-                  <div className="col">PROCEDURES</div>
-                </div>
-
-                {/* ✅ FIX 2: استخدام filteredBooks بدل books */}
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr className="fw-bold border-bottom text-center">
+                      <th>BOOK</th>
+                      <th>AUTHOR</th>
+                      <th className="d-none d-md-table-cell">CATEGORY</th>
+                      <th className="d-none d-sm-table-cell">STATUS</th>
+                      <th>PROCEDURES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                 {filteredBooks.map((book) => (
-                  <div
-                    key={book.id}
-                    className="card p-3 shadow mb-3 d-flex flex-row align-items-center text-center"
-                  >
-                    <div className="col d-flex align-items-center gap-2">
-                      <div className="rounded-3">
-                        <img
-                          src={book.coverUrl}
-                          alt={book.title}
-                          style={{ width: "50px" }}
-                        />
-                      </div>
-                      <p className="m-0">{book.title}</p>
-                    </div>
-
-                    <p className="m-0 col">{book.author}</p>
-                    <p className="m-0 col">{book.category}</p>
-                    <p className="m-0 col">{book.status || "—"}</p>
-
-                    <div className="col text-center d-flex justify-content-center gap-3">
-                      {/* ✅ FIX 3: فتح الـ Edit Modal */}
-                      <button
-                        onClick={() => openEditModal(book)}
-                        className="bg-transparent border-0"
-                      >
-                        <i className="fa-solid fa-pen text-primary"></i>
-                      </button>
-
-                      <button
-                        onClick={() => deleteBook(book)}
-                        className="bg-transparent border-0"
-                      >
-                        <i className="fa-solid fa-trash-can text-danger"></i>
-                      </button>
-                    </div>
-                  </div>
+                    <tr key={book.id} className="text-center align-middle">
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          <img src={book.coverUrl} alt={book.title} style={{ width: "40px", borderRadius: 4 }}
+                            onError={e=>{e.target.onerror=null;e.target.src="https://placehold.co/40x55?text=📖";}}/>
+                          <span className="fw-semibold text-start" style={{ fontSize: 13 }}>{book.title}</span>
+                        </div>
+                      </td>
+                      <td style={{ fontSize: 13 }}>{book.author}</td>
+                      <td className="d-none d-md-table-cell" style={{ fontSize: 13 }}>{book.category}</td>
+                      <td className="d-none d-sm-table-cell" style={{ fontSize: 13 }}>{book.status || "—"}</td>
+                      <td>
+                        <div className="d-flex justify-content-center gap-3">
+                          <button onClick={() => openEditModal(book)} className="bg-transparent border-0">
+                            <i className="fa-solid fa-pen text-primary"></i>
+                          </button>
+                          <button onClick={() => deleteBook(book)} className="bg-transparent border-0">
+                            <i className="fa-solid fa-trash-can text-danger"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                 ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

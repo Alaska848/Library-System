@@ -1587,7 +1587,7 @@ function UserProfile() {
 
       <div
         className="container-fluid"
-        style={{ maxWidth: 1200, padding: "32px 24px" }}
+        style={{ maxWidth: 1200, padding: "20px 12px" }}
       >
         <div className="row g-4">
           <div className="col-12 col-md-3">

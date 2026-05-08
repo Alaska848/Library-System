@@ -240,6 +240,7 @@ export default function BorrowingLog() {
           </div>
         )}
 
+        <div style={{ overflowX: "auto" }}>
         <table style={s.table}>
           <thead>
             <tr>
@@ -440,6 +441,7 @@ export default function BorrowingLog() {
             ))}
           </tbody>
         </table>
+        </div>
 
         <div style={s.pagination}>
           <span>
