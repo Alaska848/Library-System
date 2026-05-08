@@ -1396,21 +1396,26 @@ function UserProfile() {
     setPhotoAlert(null);
 
     try {
-      const imageFormData = new FormData();
-      imageFormData.append("image", file);
+     const imageFormData = new FormData();
+     imageFormData.append("file", file);
+     imageFormData.append("upload_preset", "library-system");
 
-      imageFormData.append("upload_preset", "library-system");
+     const res = await fetch(
+       "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
+       {
+         method: "POST",
+         body: imageFormData,
+       },
+     );
 
-      const res = await fetch(
-        "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
-        {
-          method: "POST",
-          body: imageFormData,
-        },
-      );
+     const data = await res.json();
+     console.log("Cloudinary profile response:", data);
 
-      const data = await res.json();
-      const url = data.secure_url;
+     if (!res.ok || !data.secure_url) {
+       throw new Error(data.error?.message || "Image upload failed");
+     }
+
+     const url = data.secure_url;
 
       if (!url) {
         throw new Error("Upload server did not return imageUrl");
