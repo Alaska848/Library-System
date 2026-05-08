@@ -314,11 +314,14 @@ function SettingsPanel({ userData, authUser }) {
   };
 
   const accountCollectionName =
-    userData?.role === "doctor"
+    userData?.collectionName ||
+    (String(userData?.role || "").toLowerCase() === "doctor"
       ? "doctors"
-      : userData?.role === "admin"
+      : String(userData?.role || "").toLowerCase() === "admin"
         ? "admins"
-        : "students";
+        : "students");
+
+  const accountDocId = userData?.docId || authUser?.uid;
 
   const handleEmailChange = async () => {
     if (!newEmail || !emailPass) {
@@ -332,7 +335,7 @@ function SettingsPanel({ userData, authUser }) {
     try {
       await reauth(emailPass);
       await updateEmail(authUser, newEmail);
-      await updateDoc(doc(db, accountCollectionName, authUser.uid), {
+      await updateDoc(doc(db, accountCollectionName, accountDocId), {
         email: newEmail,
       });
       setEmailAlert({ type: "success", msg: "Email updated successfully! ✅" });
@@ -707,7 +710,7 @@ function SettingsPanel({ userData, authUser }) {
   );
 }
 
-function WishlistPanel({ userId }) {
+function WishlistPanel({ userId, unavailableBookIds = new Set() }) {
   const [wishlist, setWishlist] = useState([]);
   const [removing, setRemoving] = useState({});
 
@@ -886,28 +889,51 @@ function WishlistPanel({ userId }) {
                   fontSize: 12,
                   fontWeight: 600,
                   marginTop: 4,
-                  color: w.available ? "#16a34a" : "#f59e0b",
+                  color: unavailableBookIds.has(w.bookId)
+                    ? "#f59e0b"
+                    : "#16a34a",
                 }}
               >
-                {w.available ? "Available Now" : "Not Available"}
+                {unavailableBookIds.has(w.bookId)
+                  ? "Not Available"
+                  : "Available Now"}
               </div>
             </div>
 
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <Link
-                to="/catalog"
-                style={{
-                  background: "#633a19",
-                  color: "#fff",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  padding: "6px 14px",
-                  textDecoration: "none",
-                }}
-              >
-                Borrow
-              </Link>
+              {unavailableBookIds.has(w.bookId) ? (
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    background: "#E5E7EB",
+                    color: "#6B7280",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: "6px 14px",
+                    cursor: "not-allowed",
+                  }}
+                >
+                  Not Available
+                </button>
+              ) : (
+                <Link
+                  to="/catalog"
+                  style={{
+                    background: "#633a19",
+                    color: "#fff",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: "6px 14px",
+                    textDecoration: "none",
+                  }}
+                >
+                  Borrow
+                </Link>
+              )}
 
               <button
                 onClick={() => handleRemove(w.docId)}
@@ -1290,6 +1316,51 @@ function HistoryPanel({ history }) {
     </div>
   );
 }
+async function findAccountByUidOrEmail(u) {
+  const collectionsToCheck = ["doctors", "students", "admins"];
+
+  for (const collectionName of collectionsToCheck) {
+    const directSnap = await getDoc(doc(db, collectionName, u.uid));
+
+    if (directSnap.exists()) {
+      return {
+        uid: u.uid,
+        docId: directSnap.id,
+        collectionName,
+        email: u.email,
+        ...directSnap.data(),
+      };
+    }
+  }
+
+  for (const collectionName of collectionsToCheck) {
+    const q = query(
+      collection(db, collectionName),
+      where("email", "==", u.email),
+    );
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      const d = snap.docs[0];
+
+      return {
+        uid: u.uid,
+        docId: d.id,
+        collectionName,
+        email: u.email,
+        ...d.data(),
+      };
+    }
+  }
+
+  return {
+    uid: u.uid,
+    docId: u.uid,
+    email: u.email,
+    collectionName: "students",
+    role: "student",
+  };
+}
 
 function UserProfile() {
   const navigate = useNavigate();
@@ -1300,6 +1371,7 @@ function UserProfile() {
   const [borrowed, setBorrowed] = useState([]);
   const [history, setHistory] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  const [unavailableBookIds, setUnavailableBookIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [photoURL, setPhotoURL] = useState(null);
@@ -1319,34 +1391,19 @@ function UserProfile() {
       setAuthUser(u);
 
       try {
-        const collectionsToCheck = ["students", "doctors", "admins"];
-        let foundSnap = null;
-        let foundCollection = "students";
-
-        for (const collectionName of collectionsToCheck) {
-          const snap = await getDoc(doc(db, collectionName, u.uid));
-
-          if (snap.exists()) {
-            foundSnap = snap;
-            foundCollection = collectionName;
-            break;
-          }
-        }
-
-        const data = foundSnap
-          ? {
-              uid: u.uid,
-              email: u.email,
-              collectionName: foundCollection,
-              ...foundSnap.data(),
-            }
-          : { uid: u.uid, email: u.email, collectionName: "students" };
+        const data = await findAccountByUidOrEmail(u);
 
         setUserData(data);
         setPhotoURL(data.photoURL || null);
       } catch (error) {
         console.error("Profile data error:", error);
-        setUserData({ uid: u.uid, email: u.email, collectionName: "students" });
+        setUserData({
+          uid: u.uid,
+          docId: u.uid,
+          email: u.email,
+          collectionName: "students",
+          role: "student",
+        });
       }
 
       try {
@@ -1370,12 +1427,51 @@ function UserProfile() {
         const s2 = await getDocs(q2);
         setHistory(s2.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch {}
+      try {
+        const q3 = query(
+          collection(db, "wishlists"),
+          where("userId", "==", u.uid),
+        );
+
+        const s3 = await getDocs(q3);
+
+        setWishlist(
+          s3.docs.map((d) => ({
+            docId: d.id,
+            ...d.data(),
+          })),
+        );
+      } catch (error) {
+        console.error("Wishlist load error:", error);
+        setWishlist([]);
+      }
 
       setLoading(false);
     });
 
     return () => unsub();
   }, [navigate]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "loans"), (snap) => {
+      const unavailable = new Set();
+
+      snap.forEach((d) => {
+        const data = d.data();
+
+        if (
+          ["Active", "Overdue", "Suspended"].includes(data.status) &&
+          data.bookId
+        ) {
+          unavailable.add(data.bookId);
+        }
+      });
+
+      setUnavailableBookIds(unavailable);
+    });
+
+    return () => unsub();
+  }, []);
 
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
@@ -1396,26 +1492,26 @@ function UserProfile() {
     setPhotoAlert(null);
 
     try {
-     const imageFormData = new FormData();
-     imageFormData.append("file", file);
-     imageFormData.append("upload_preset", "library-system");
+      const imageFormData = new FormData();
+      imageFormData.append("file", file);
+      imageFormData.append("upload_preset", "library-system");
 
-     const res = await fetch(
-       "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
-       {
-         method: "POST",
-         body: imageFormData,
-       },
-     );
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
+        {
+          method: "POST",
+          body: imageFormData,
+        },
+      );
 
-     const data = await res.json();
-     console.log("Cloudinary profile response:", data);
+      const data = await res.json();
+      console.log("Cloudinary profile response:", data);
 
-     if (!res.ok || !data.secure_url) {
-       throw new Error(data.error?.message || "Image upload failed");
-     }
+      if (!res.ok || !data.secure_url) {
+        throw new Error(data.error?.message || "Image upload failed");
+      }
 
-     const url = data.secure_url;
+      const url = data.secure_url;
 
       if (!url) {
         throw new Error("Upload server did not return imageUrl");
@@ -1429,12 +1525,19 @@ function UserProfile() {
             ? "admins"
             : "students");
 
-      await updateDoc(doc(db, collectionName, authUser.uid), {
+      const docId = userData?.docId || authUser.uid;
+
+      await updateDoc(doc(db, collectionName, docId), {
         photoURL: url,
       });
 
       setPhotoURL(url);
-      setUserData((prev) => ({ ...prev, photoURL: url, collectionName }));
+      setUserData((prev) => ({
+        ...prev,
+        photoURL: url,
+        collectionName,
+        docId,
+      }));
       setPhotoAlert({ type: "success", msg: "Photo updated! ✅" });
     } catch (error) {
       console.error("Photo upload error:", error);
@@ -1462,12 +1565,19 @@ function UserProfile() {
             ? "admins"
             : "students");
 
-      await updateDoc(doc(db, collectionName, authUser.uid), {
+      const docId = userData?.docId || authUser.uid;
+
+      await updateDoc(doc(db, collectionName, docId), {
         photoURL: null,
       });
 
       setPhotoURL(null);
-      setUserData((prev) => ({ ...prev, photoURL: null, collectionName }));
+      setUserData((prev) => ({
+        ...prev,
+        photoURL: null,
+        collectionName,
+        docId,
+      }));
       setPhotoAlert({ type: "info", msg: "Photo removed." });
     } catch (error) {
       console.error("Photo delete error:", error);
@@ -1498,15 +1608,24 @@ function UserProfile() {
 
   const displayName =
     userData?.name ||
+    userData?.Name ||
+    userData?.fullName ||
+    userData?.FullName ||
+    userData?.doctorName ||
     userData?.displayName ||
     userData?.email?.split("@")[0] ||
     "User";
 
   const profileId =
     userData?.Userid ||
+    userData?.UserId ||
     userData?.userId ||
     userData?.studentId ||
+    userData?.doctorId ||
+    userData?.DoctorId ||
     userData?.code ||
+    userData?.ID ||
+    userData?.id ||
     authUser?.uid?.slice(0, 8).toUpperCase() ||
     "—";
 
@@ -1532,7 +1651,6 @@ function UserProfile() {
         year: "numeric",
       })
     : "—";
-
   const SIDEBAR = [
     {
       icon: "fa-solid fa-user",
@@ -1840,9 +1958,12 @@ function UserProfile() {
                           marginBottom: 20,
                         }}
                       >
-                        {userData?.role === "doctor"
+                        {userData?.collectionName === "doctors" ||
+                        String(userData?.role || "").toLowerCase() === "doctor"
                           ? "Faculty Member"
-                          : userData?.role === "admin"
+                          : userData?.collectionName === "admins" ||
+                              String(userData?.role || "").toLowerCase() ===
+                                "admin"
                             ? "Administrator"
                             : "Member"}
                       </div>
@@ -2047,86 +2168,132 @@ function UserProfile() {
                           </Link>
                         </div>
                       ) : (
-                        wishlist.slice(0, 3).map((w, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 14,
-                              padding: "12px 0",
-                              borderBottom:
-                                i < 2 ? "1px solid #f5f5f5" : "none",
-                            }}
-                          >
+                        wishlist.slice(0, 3).map((w, i) => {
+                          const isUnavailable = unavailableBookIds.has(
+                            w.bookId,
+                          );
+
+                          return (
                             <div
+                              key={i}
                               style={{
-                                width: 44,
-                                height: 58,
-                                borderRadius: 6,
-                                flexShrink: 0,
-                                background:
-                                  "linear-gradient(135deg,#9e734a,#4a2c13)",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
+                                gap: 14,
+                                padding: "12px 0",
+                                borderBottom:
+                                  i < 2 ? "1px solid #f5f5f5" : "none",
                               }}
                             >
-                              <i
-                                className="fa-solid fa-book"
-                                style={{
-                                  color: "rgba(255,255,255,0.6)",
-                                  fontSize: 14,
-                                }}
-                              />
+                              {w.coverUrl ? (
+                                <img
+                                  src={w.coverUrl}
+                                  alt={w.title}
+                                  style={{
+                                    width: 44,
+                                    height: 58,
+                                    borderRadius: 6,
+                                    objectFit: "cover",
+                                    flexShrink: 0,
+                                  }}
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src =
+                                      "https://placehold.co/44x58?text=Book";
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: 44,
+                                    height: 58,
+                                    borderRadius: 6,
+                                    flexShrink: 0,
+                                    background:
+                                      "linear-gradient(135deg,#9e734a,#4a2c13)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <i
+                                    className="fa-solid fa-book"
+                                    style={{
+                                      color: "rgba(255,255,255,0.6)",
+                                      fontSize: 14,
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 700,
+                                    fontSize: 14,
+                                    color: "#1f2937",
+                                  }}
+                                >
+                                  {w.title}
+                                </div>
+
+                                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                                  {w.author}
+                                </div>
+
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    color: isUnavailable
+                                      ? "#f59e0b"
+                                      : "#16a34a",
+                                    fontWeight: 600,
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  {isUnavailable
+                                    ? "Not Available"
+                                    : "Available Now"}
+                                </div>
+                              </div>
+
+                              {isUnavailable ? (
+                                <button
+                                  type="button"
+                                  disabled
+                                  style={{
+                                    background: "#E5E7EB",
+                                    color: "#6B7280",
+                                    border: "none",
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    padding: "5px 14px",
+                                    flexShrink: 0,
+                                    cursor: "not-allowed",
+                                  }}
+                                >
+                                  Not Available
+                                </button>
+                              ) : (
+                                <Link
+                                  to="/catalog"
+                                  style={{
+                                    background: "#f3f4f6",
+                                    color: "#374151",
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    padding: "5px 14px",
+                                    textDecoration: "none",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  Borrow
+                                </Link>
+                              )}
                             </div>
-
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div
-                                style={{
-                                  fontWeight: 700,
-                                  fontSize: 14,
-                                  color: "#1f2937",
-                                }}
-                              >
-                                {w.title}
-                              </div>
-
-                              <div style={{ fontSize: 12, color: "#6b7280" }}>
-                                {w.author}
-                              </div>
-
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  color: w.available ? "#16a34a" : "#f59e0b",
-                                  fontWeight: 600,
-                                  marginTop: 2,
-                                }}
-                              >
-                                {w.available
-                                  ? "Available Now"
-                                  : "Not Available"}
-                              </div>
-                            </div>
-
-                            <Link
-                              to="/catalog"
-                              style={{
-                                background: "#f3f4f6",
-                                color: "#374151",
-                                borderRadius: 8,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                padding: "5px 14px",
-                                textDecoration: "none",
-                                flexShrink: 0,
-                              }}
-                            >
-                              Borrow
-                            </Link>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -2200,7 +2367,10 @@ function UserProfile() {
             )}
 
             {activeTab === "wishlist" && (
-              <WishlistPanel userId={authUser?.uid} />
+              <WishlistPanel
+                userId={authUser?.uid}
+                unavailableBookIds={unavailableBookIds}
+              />
             )}
 
             {activeTab === "history" && <HistoryPanel history={history} />}

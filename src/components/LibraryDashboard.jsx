@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { db, auth } from "./firebase";
 import {
   collection,
+  doc,
   onSnapshot,
   query,
+  serverTimestamp,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -15,72 +18,142 @@ const statusStyle = {
   Overdue: { background: "#FEE2E2", color: "#DC2626" },
   Pending: { background: "#FEF3C7", color: "#B45309" },
   Rejected: { background: "#F3F4F6", color: "#6B7280" },
+  Suspended: { background: "#FEF3C7", color: "#92400E" },
 };
+
+function parseDateOnly(value) {
+  if (!value || value === "—") return null;
+
+  if (typeof value === "string") {
+    const d = new Date(value + "T12:00:00");
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  if (value?.toDate) return value.toDate();
+  if (value?.seconds) return new Date(value.seconds * 1000);
+
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function getLoanStatus(loan) {
+  if (loan.status === "Returned") return "Returned";
+  if (loan.status === "Rejected") return "Rejected";
+  if (loan.status === "Pending") return "Pending";
+  if (loan.status === "Suspended") return "Suspended";
+
+  const dueDate = parseDateOnly(loan.dueDate || loan.returnDate);
+
+  if (dueDate) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+
+    if (dueDate < today) return "Overdue";
+  }
+
+  return "Active";
+}
 
 export default function LibraryDashboard() {
   const [loans, setLoans] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("Current Loans");
+  const [actionLoading, setActionLoading] = useState({});
+  const [toast, setToast] = useState(null);
   const navigate = useNavigate();
 
-  // Get logged-in user
+  const showToast = (msg, color = "#92400E") => {
+    setToast({ msg, color });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
+
     return () => unsub();
   }, []);
 
-  // Fetch loans for this user where status is Active, Overdue, or Returned
   useEffect(() => {
     if (!currentUser) return;
 
     const q = query(
       collection(db, "loans"),
-      where("userId", "==", currentUser.uid)
+      where("userId", "==", currentUser.uid),
     );
 
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
       list.sort((a, b) => {
         const ta = a.createdAt?.toMillis?.() ?? 0;
         const tb = b.createdAt?.toMillis?.() ?? 0;
         return tb - ta;
       });
+
       setLoans(list);
     });
 
     return () => unsub();
   }, [currentUser]);
 
+  const handleRenewRequest = async (loan) => {
+    if (loan.renewalStatus === "Pending") {
+      showToast("⏳ Your renewal request is already pending.", "#B45309");
+      return;
+    }
+
+    setActionLoading((p) => ({ ...p, [`renew_${loan.id}`]: true }));
+
+    try {
+      await updateDoc(doc(db, "loans", loan.id), {
+        renewalStatus: "Pending",
+        renewalRequestedAt: serverTimestamp(),
+        renewalDays: 7,
+      });
+
+      showToast("✅ Renewal request sent to admin.", "#059669");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to send renewal request.", "#DC2626");
+    } finally {
+      setActionLoading((p) => ({ ...p, [`renew_${loan.id}`]: false }));
+    }
+  };
+
   const visibleLoans = loans.filter((l) =>
-    ["Active", "Overdue", "Returned"].includes(l.status)
+    ["Active", "Overdue", "Returned", "Suspended"].includes(getLoanStatus(l)),
   );
 
   const currentLoans = visibleLoans.filter((l) =>
-    ["Active", "Overdue"].includes(l.status)
+    ["Active", "Overdue", "Suspended"].includes(getLoanStatus(l)),
   );
-  const historyLoans = visibleLoans.filter((l) => l.status === "Returned");
+
+  const historyLoans = visibleLoans.filter(
+    (l) => getLoanStatus(l) === "Returned",
+  );
 
   const displayedLoans =
     activeTab === "Current Loans" ? currentLoans : historyLoans;
 
   const totalBorrowed = visibleLoans.length;
-  const currentlyActive = currentLoans.filter((l) => l.status === "Active").length;
-  const overdueItems = currentLoans.filter((l) => l.status === "Overdue").length;
 
-  const initials = currentUser?.displayName
-    ? currentUser.displayName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "U";
+  const currentlyActive = currentLoans.filter(
+    (l) => getLoanStatus(l) === "Active",
+  ).length;
+
+  const overdueItems = currentLoans.filter(
+    (l) => getLoanStatus(l) === "Overdue",
+  ).length;
 
   return (
     <div style={s.page}>
-      {/* Header Stats */}
+      {toast && (
+        <div style={{ ...s.toast, background: toast.color }}>{toast.msg}</div>
+      )}
+
       <div style={s.headerRow}>
         <div>
           <h1 style={s.pageTitle}>My Borrowed Books</h1>
@@ -89,16 +162,16 @@ export default function LibraryDashboard() {
             through your borrowing history.
           </p>
         </div>
+
         <button
           type="button"
           style={s.borrowBtn}
-          onClick={() => navigate("/admin/BooksM")}
+          onClick={() => navigate("/catalog")}
         >
           + Borrow New Book
         </button>
       </div>
 
-      {/* Stats Cards */}
       <div style={s.statsRow}>
         <div style={s.statCard}>
           <div>
@@ -110,6 +183,7 @@ export default function LibraryDashboard() {
           </div>
           <span style={s.statIcon}>📚</span>
         </div>
+
         <div style={s.statCard}>
           <div>
             <div style={s.statLabel}>Currently Active</div>
@@ -118,10 +192,13 @@ export default function LibraryDashboard() {
           </div>
           <span style={s.statIcon}>🔵</span>
         </div>
+
         <div style={s.statCard}>
           <div>
             <div style={s.statLabel}>Overdue Items</div>
-            <div style={{ ...s.statNumber, color: "#DC2626" }}>{overdueItems}</div>
+            <div style={{ ...s.statNumber, color: "#DC2626" }}>
+              {overdueItems}
+            </div>
             <div style={{ ...s.statSub, color: "#DC2626" }}>
               {overdueItems > 0 ? "↘ Action required" : "All good!"}
             </div>
@@ -130,17 +207,19 @@ export default function LibraryDashboard() {
         </div>
       </div>
 
-      {/* Loan Records Table */}
       <div style={s.tableCard}>
         <div style={s.tableHeader}>
           <h2 style={s.tableTitle}>Loan Records</h2>
           <div style={s.tableActions}>
-            <button type="button" style={s.filterBtn}>≡ Filter</button>
-            <button type="button" style={s.exportBtn}>↓ Export</button>
+            <button type="button" style={s.filterBtn}>
+              ≡ Filter
+            </button>
+            <button type="button" style={s.exportBtn}>
+              ↓ Export
+            </button>
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={s.tabs}>
           {["Current Loans", "Borrowing History"].map((tab) => (
             <button
@@ -154,77 +233,168 @@ export default function LibraryDashboard() {
           ))}
         </div>
 
-        {/* Table */}
         <table style={s.table}>
           <thead>
             <tr>
-              {["Book Title", "Borrow Date", "Return Date", "Status", "Action"].map(
-                (h) => (
-                  <th key={h} style={s.th}>
-                    {h}
-                  </th>
-                )
-              )}
+              {[
+                "Book Title",
+                "Borrow Date",
+                "Return Date",
+                "Status",
+                "Renewal",
+                "Action",
+              ].map((h) => (
+                <th key={h} style={s.th}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
+
           <tbody>
             {displayedLoans.length === 0 && (
               <tr>
-                <td colSpan={5} style={s.emptyCell}>
+                <td colSpan={6} style={s.emptyCell}>
                   No records found
                 </td>
               </tr>
             )}
-            {displayedLoans.map((loan) => (
-              <tr key={loan.id} style={s.tr}>
-                <td style={s.td}>
-                  <div style={s.bookCell}>
-                    <div style={s.bookThumb}>📖</div>
-                    <div>
-                      <div style={s.bookTitle}>{loan.book}</div>
-                      <div style={s.bookAuthor}>{loan.author || ""}</div>
+
+            {displayedLoans.map((loan) => {
+              const realStatus = getLoanStatus(loan);
+              const renewalStatus = loan.renewalStatus || "—";
+              const canRequestRenew =
+                ["Active", "Overdue"].includes(realStatus) &&
+                renewalStatus !== "Pending" &&
+                renewalStatus !== "Accepted";
+
+              return (
+                <tr key={loan.id} style={s.tr}>
+                  <td style={s.td}>
+                    <div style={s.bookCell}>
+                      <div style={s.bookThumb}>📖</div>
+                      <div>
+                        <div style={s.bookTitle}>{loan.book}</div>
+                        <div style={s.bookAuthor}>{loan.author || ""}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td style={s.td}>{loan.loanDate || "—"}</td>
-                <td
-                  style={{
-                    ...s.td,
-                    color: loan.status === "Overdue" ? "#DC2626" : "inherit",
-                    fontWeight: loan.status === "Overdue" ? 600 : 400,
-                    fontStyle: loan.status === "Overdue" ? "italic" : "normal",
-                  }}
-                >
-                  {loan.dueDate || "—"}
-                </td>
-                <td style={s.td}>
-                  <span
+                  </td>
+
+                  <td style={s.td}>{loan.loanDate || "—"}</td>
+
+                  <td
                     style={{
-                      ...s.badge,
-                      ...(statusStyle[loan.status] || {
-                        background: "#F3F4F6",
-                        color: "#374151",
-                      }),
+                      ...s.td,
+                      color: realStatus === "Overdue" ? "#DC2626" : "inherit",
+                      fontWeight: realStatus === "Overdue" ? 600 : 400,
+                      fontStyle: realStatus === "Overdue" ? "italic" : "normal",
                     }}
                   >
-                    {loan.status}
-                  </span>
-                </td>
-                <td style={s.td}>
-                  {loan.status === "Overdue" && (
-                    <button type="button" style={s.renewBtn}>
-                      Renew
-                    </button>
-                  )}
-                  {loan.status === "Returned" && (
-                    <span style={{ color: "#9CA3AF", fontSize: 20 }}>···</span>
-                  )}
-                  {loan.status === "Active" && (
-                    <span style={{ color: "#9CA3AF", fontSize: 20 }}>···</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    {loan.dueDate || loan.returnDate || "—"}
+                  </td>
+
+                  <td style={s.td}>
+                    <span
+                      style={{
+                        ...s.badge,
+                        ...(statusStyle[realStatus] || {
+                          background: "#F3F4F6",
+                          color: "#374151",
+                        }),
+                      }}
+                    >
+                      {realStatus}
+                    </span>
+                  </td>
+
+                  <td style={s.td}>
+                    {renewalStatus === "Pending" ? (
+                      <span
+                        style={{
+                          ...s.renewalPill,
+                          background: "#FEF3C7",
+                          color: "#B45309",
+                        }}
+                      >
+                        Pending
+                      </span>
+                    ) : renewalStatus === "Accepted" ? (
+                      <span
+                        style={{
+                          ...s.renewalPill,
+                          background: "#D1FAE5",
+                          color: "#059669",
+                        }}
+                      >
+                        Accepted
+                      </span>
+                    ) : renewalStatus === "Rejected" ? (
+                      <span
+                        style={{
+                          ...s.renewalPill,
+                          background: "#FEE2E2",
+                          color: "#DC2626",
+                        }}
+                      >
+                        Rejected
+                      </span>
+                    ) : (
+                      <span style={{ color: "#9CA3AF" }}>—</span>
+                    )}
+                  </td>
+
+                  <td style={s.td}>
+                    {canRequestRenew && (
+                      <button
+                        type="button"
+                        style={{
+                          ...s.renewBtn,
+                          opacity: actionLoading[`renew_${loan.id}`] ? 0.7 : 1,
+                        }}
+                        disabled={actionLoading[`renew_${loan.id}`]}
+                        onClick={() => handleRenewRequest(loan)}
+                      >
+                        {actionLoading[`renew_${loan.id}`]
+                          ? "Sending..."
+                          : "Request Renew"}
+                      </button>
+                    )}
+
+                    {renewalStatus === "Pending" && (
+                      <span style={{ color: "#9CA3AF", fontSize: 13 }}>
+                        Waiting admin
+                      </span>
+                    )}
+
+                    {realStatus === "Suspended" && (
+                      <span
+                        style={{
+                          color: "#92400E",
+                          fontSize: 13,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Account suspended
+                      </span>
+                    )}
+
+                    {realStatus === "Returned" && (
+                      <span style={{ color: "#9CA3AF", fontSize: 20 }}>
+                        ···
+                      </span>
+                    )}
+
+                    {realStatus === "Active" &&
+                      !canRequestRenew &&
+                      renewalStatus !== "Pending" && (
+                        <span style={{ color: "#9CA3AF", fontSize: 20 }}>
+                          ···
+                        </span>
+                      )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -232,15 +402,21 @@ export default function LibraryDashboard() {
           <span>
             Showing {displayedLoans.length} of {totalBorrowed} records
           </span>
+
           <div style={s.pages}>
-            <button type="button" style={s.pageBtn}>‹</button>
-            <button type="button" style={{ ...s.pageBtn, ...s.pageBtnActive }}>1</button>
-            <button type="button" style={s.pageBtn}>›</button>
+            <button type="button" style={s.pageBtn}>
+              ‹
+            </button>
+            <button type="button" style={{ ...s.pageBtn, ...s.pageBtnActive }}>
+              1
+            </button>
+            <button type="button" style={s.pageBtn}>
+              ›
+            </button>
           </div>
         </div>
       </div>
 
-      {/* CTA Banner */}
       <div style={s.ctaBanner}>
         <div>
           <h3 style={s.ctaTitle}>Ready for your next adventure?</h3>
@@ -251,7 +427,7 @@ export default function LibraryDashboard() {
           <button
             type="button"
             style={s.ctaBtn}
-            onClick={() => navigate("/admin/BooksM")}
+            onClick={() => navigate("/catalog")}
           >
             Explore Catalog
           </button>
@@ -269,6 +445,18 @@ const s = {
     background: "#F9FAFB",
     color: "#111827",
     minHeight: "100vh",
+  },
+  toast: {
+    position: "fixed",
+    top: 20,
+    right: 20,
+    zIndex: 999,
+    color: "#fff",
+    padding: "12px 22px",
+    borderRadius: 10,
+    fontWeight: 600,
+    fontSize: 14,
+    boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
   },
   headerRow: {
     display: "flex",
@@ -406,6 +594,12 @@ const s = {
     borderRadius: 20,
     fontSize: 12,
     fontWeight: 600,
+  },
+  renewalPill: {
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 700,
   },
   renewBtn: {
     background: "#fff",

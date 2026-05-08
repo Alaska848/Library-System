@@ -116,6 +116,7 @@ function LibraryHome() {
     : allBooks;
 
   const toggleWishlist = async (book) => {
+    console.log("current user:", auth.currentUser);
     if (!uid) {
       Swal.fire({
         title: "Login Required",
@@ -303,32 +304,69 @@ function LibraryHome() {
               featuredBooks.map((b) => {
                 const unavailable = unavailableBookIds.has(b.id);
                 const myPending = myPendingBookIds.has(b.id);
+                const inWishlist = uid && !!wishlistMap[b.id];
                 return (
                   <div key={b.id} className="col-12 col-sm-6 col-lg-3">
-                    <div className="card border-0 rounded-4 shadow h-100 overflow-hidden" style={{ position: "relative" }}>
-
+                    <div
+                      className="card border-0 rounded-4 shadow h-100 overflow-hidden"
+                      style={{ position: "relative" }}
+                    >
                       {/* ❤ زرار الـ Wishlist */}
                       <button
                         onClick={() => toggleWishlist(b)}
                         disabled={!!wishlistLoading[b.id]}
-                        title={wishlistMap[b.id] ? "Remove from wishlist" : "Add to wishlist"}
+                        title={
+                          inWishlist
+                            ? "Remove from wishlist"
+                            : "Add to wishlist"
+                        }
                         style={{
-                          position: "absolute", top: 10, right: 10, zIndex: 2,
-                          width: 34, height: 34, borderRadius: "50%",
+                          position: "absolute",
+                          top: 10,
+                          right: 10,
+                          zIndex: 2,
+                          width: 34,
+                          height: 34,
+                          borderRadius: "50%",
                           background: "rgba(255,255,255,0.92)",
-                          border: "none", cursor: "pointer",
-                          display: "flex", alignItems: "center", justifyContent: "center",
+                          border: "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                           transition: "transform 0.15s",
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.15)"}
-                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                      >
-                        {wishlistLoading[b.id]
-                          ? <span className="spinner-border spinner-border-sm" style={{ width: 14, height: 14, borderWidth: 2, color: "#633a19" }} />
-                          : <i className={wishlistMap[b.id] ? "fa-solid fa-heart" : "fa-regular fa-heart"}
-                              style={{ fontSize: 16, color: wishlistMap[b.id] ? "#ef4444" : "#9ca3af" }} />
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.transform = "scale(1.15)")
                         }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.transform = "scale(1)")
+                        }
+                      >
+                        {wishlistLoading[b.id] ? (
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            style={{
+                              width: 14,
+                              height: 14,
+                              borderWidth: 2,
+                              color: "#633a19",
+                            }}
+                          />
+                        ) : (
+                          <i
+                            className={
+                              inWishlist
+                                ? "fa-solid fa-heart"
+                                : "fa-regular fa-heart"
+                            }
+                            style={{
+                              fontSize: 16,
+                              color: inWishlist ? "#ef4444" : "#9ca3af",
+                            }}
+                          />
+                        )}
                       </button>
                       <div className="library-card-img">
                         <img
@@ -337,7 +375,8 @@ function LibraryHome() {
                           className="w-100 h-100 object-fit-cover"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = "https://placehold.co/400x300?text=No+Cover";
+                            e.target.src =
+                              "https://placehold.co/400x300?text=No+Cover";
                           }}
                         />
                       </div>

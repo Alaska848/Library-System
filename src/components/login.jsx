@@ -14,6 +14,25 @@ function Login() {
 
   const navigate = useNavigate();
 
+  const showSuspendedPopup = async (reason) => {
+    await Swal.fire({
+      title: "Account Suspended",
+      html: `
+        <div style="font-size:15px;line-height:1.6;color:#374151">
+          <div style="font-size:44px;margin-bottom:8px">🚫</div>
+          <b>Your account has been suspended</b><br/>
+          please contact the admin
+        </div>
+      `,
+      text: reason || undefined,
+      icon: "error",
+      confirmButtonText: "Ok",
+      confirmButtonColor: "#92400E",
+      background: "#FFFBEB",
+      color: "#111827",
+    });
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -23,6 +42,7 @@ function Login() {
       const uid = cred.user.uid;
 
       const adminSnap = await getDoc(doc(db, "admins", uid));
+
       if (adminSnap.exists()) {
         sessionStorage.setItem("role", "admin");
         window.dispatchEvent(new Event("roleChanged"));
@@ -41,15 +61,33 @@ function Login() {
       }
 
       const studentSnap = await getDoc(doc(db, "students", uid));
+
       if (studentSnap.exists()) {
         const studentData = studentSnap.data();
 
-        if (studentData.status?.toLowerCase().trim() !== "active") {
+        const studentStatus = String(studentData.status || "active")
+          .toLowerCase()
+          .trim();
+
+        if (studentData.suspended === true || studentStatus === "suspended") {
           await signOut(auth);
+          sessionStorage.clear();
+
+          await showSuspendedPopup(
+            studentData.suspendedReason ||
+              "Your account has been suspended please contact the admin",
+          );
+
+          return;
+        }
+
+        if (studentStatus !== "active") {
+          await signOut(auth);
+          sessionStorage.clear();
 
           await Swal.fire({
-            title: "Account Suspended",
-            text: "Your account has been suspended. Please contact the library administration.",
+            title: "Account Not Active",
+            text: "Your account is not active. Please contact the library administration.",
             icon: "error",
             confirmButtonText: "Ok",
             confirmButtonColor: "#633a19",
@@ -81,15 +119,33 @@ function Login() {
       }
 
       const doctorSnap = await getDoc(doc(db, "doctors", uid));
+
       if (doctorSnap.exists()) {
         const doctorData = doctorSnap.data();
 
-        if (doctorData.status?.toLowerCase().trim() !== "active") {
+        const doctorStatus = String(doctorData.status || "active")
+          .toLowerCase()
+          .trim();
+
+        if (doctorData.suspended === true || doctorStatus === "suspended") {
           await signOut(auth);
+          sessionStorage.clear();
+
+          await showSuspendedPopup(
+            doctorData.suspendedReason ||
+              "Your account has been suspended please contact the admin",
+          );
+
+          return;
+        }
+
+        if (doctorStatus !== "active") {
+          await signOut(auth);
+          sessionStorage.clear();
 
           await Swal.fire({
             title: "Access Denied",
-            text: "Your account is not active",
+            text: "Your account is not active.",
             icon: "error",
             confirmButtonColor: "#633a19",
           });
@@ -120,10 +176,11 @@ function Login() {
       }
 
       await signOut(auth);
+      sessionStorage.clear();
 
       await Swal.fire({
         title: "Access Denied",
-        text: "User not registered in system",
+        text: "User not registered in system.",
         icon: "error",
         confirmButtonText: "Ok",
         confirmButtonColor: "#633a19",
@@ -144,6 +201,7 @@ function Login() {
   return (
     <>
       {isLoading && <LoadingOverlay />}
+
       <div className="d-flex justify-content-center align-items-center min-vh-100 mx-4">
         <div className="col-md-4 p-3 form border rounded-4 shadow">
           <div className="col-md-12">
@@ -151,7 +209,9 @@ function Login() {
               <div className="icon-circle mx-auto d-flex align-items-center justify-content-center">
                 <i className="fa-solid fa-graduation-cap fs-2 brown"></i>
               </div>
+
               <h3 className="darkorange fw-bolder px-4 mt-4">Welcome Back</h3>
+
               <p className="px-4">
                 Access your digital collection and resources
               </p>
@@ -169,6 +229,7 @@ function Login() {
             <form onSubmit={handleLogin} className="row g-3 mb-4 px-4">
               <div className="col-md-12 mb-3">
                 <label className="form-label">Institutional Email</label>
+
                 <input
                   type="email"
                   className="form-control"
@@ -181,6 +242,7 @@ function Login() {
 
               <div className="col-md-12 mb-4 text-end position-relative">
                 <label className="form-label w-100 text-start">Password</label>
+
                 <input
                   type={showPassword ? "text" : "password"}
                   className="form-control pe-5"
@@ -191,7 +253,9 @@ function Login() {
                 />
 
                 <i
-                  className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"}`}
+                  className={`fa-solid ${
+                    showPassword ? "fa-eye-slash" : "fa-eye"
+                  }`}
                   onClick={() => !isLoading && setShowPassword(!showPassword)}
                   style={{
                     position: "absolute",
