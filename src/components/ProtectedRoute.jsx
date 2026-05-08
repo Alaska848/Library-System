@@ -4,11 +4,11 @@ import { Navigate } from "react-router-dom";
 // requireAuth="borrow" → الصفحة تتفتح للكل، بس الاستعارة بتطلب login (تتعمل في الكومبوننت نفسه)
 // لو مفيش requireAuth → مفتوحة للكل
 
-export default function ProtectedRoute({ 
-  children, 
-  allowedRole, 
+export default function ProtectedRoute({
+  children,
+  allowedRole,
   allowedRoles, // للتوافقية مع arrays
-  requireAuth = "full" 
+  requireAuth = "full",
 }) {
   const role = sessionStorage.getItem("role");
 
@@ -17,11 +17,12 @@ export default function ProtectedRoute({
 
     // دعم كلاً من allowedRole و allowedRoles
     const rolesArray = allowedRoles || (allowedRole ? [allowedRole] : null);
-    
+
     if (rolesArray) {
-      const isAuthorized = rolesArray.includes(role) || 
+      const isAuthorized =
+        rolesArray.includes(role) ||
         (rolesArray.includes("user") && role === "doctor");
-      
+
       if (!isAuthorized) return <Navigate to="/" replace />;
     }
   }

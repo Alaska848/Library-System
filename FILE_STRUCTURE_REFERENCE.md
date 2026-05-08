@@ -36,7 +36,9 @@ Library-System/
 ## ✏️ **MODIFIED FILES**
 
 ### src/components/ProtectedRoute.jsx
+
 **Changes**:
+
 - Added support for `allowedRoles` (array format)
 - Now accepts both singular and plural prop names
 - Improved role checking logic
@@ -46,18 +48,20 @@ Library-System/
 export default function ProtectedRoute({ children, allowedRole }) { }
 
 // After: Supports both formats
-export default function ProtectedRoute({ 
-  children, 
+export default function ProtectedRoute({
+  children,
   allowedRole,     // singular
   allowedRoles,    // plural (new)
-  requireAuth = "full" 
+  requireAuth = "full"
 }) { }
 ```
 
 ---
 
 ### src/App.js
+
 **Changes**:
+
 - Fixed line 93: Changed `allowedRoles={["user", "doctor"]}` to `allowedRole="user"`
 - Ensured consistency with ProtectedRoute expectations
 
@@ -80,9 +84,9 @@ File: `src/constants/index.js`
 ROLES = { ADMIN, USER, DOCTOR }
 
 // Loan Status
-LOAN_STATUS = { 
-  PENDING, APPROVED, BORROWED, RETURNED, 
-  OVERDUE, REJECTED, SUSPENDED 
+LOAN_STATUS = {
+  PENDING, APPROVED, BORROWED, RETURNED,
+  OVERDUE, REJECTED, SUSPENDED
 }
 
 // Book Status
@@ -137,6 +141,7 @@ File: `src/hooks/useSharedLogic.js`
 File: `firestore.rules`
 
 ### Collections Protected:
+
 - ✅ **books** - Read all, write admin only
 - ✅ **users** - Self-edit (except role), admin full access
 - ✅ **loans** - User sees own, admin manages all
@@ -150,21 +155,23 @@ File: `firestore.rules`
 ## 🚀 **NEW UTILITIES**
 
 ### Logger: `src/utils/logger.js`
+
 ```javascript
-logger.log(label, data)        // Dev only
-logger.warn(label, message)    // Always
-logger.error(label, error)     // Always
-logger.info(label, message)    // Dev only
-logger.table(label, data)      // Dev only
+logger.log(label, data); // Dev only
+logger.warn(label, message); // Always
+logger.error(label, error); // Always
+logger.info(label, message); // Dev only
+logger.table(label, data); // Dev only
 ```
 
 ### Transactions: `src/utils/transactions.js`
+
 ```javascript
-approveLoan(loanId, adminUid, bookId)
-returnBook(loanId, bookId, userId)
-rejectLoanRequest(loanId, userId, reason)
-suspendUserAccount(userId, reason)
-addBooksInBatch(booksArray)
+approveLoan(loanId, adminUid, bookId);
+returnBook(loanId, bookId, userId);
+rejectLoanRequest(loanId, userId, reason);
+suspendUserAccount(userId, reason);
+addBooksInBatch(booksArray);
 ```
 
 ---
@@ -172,15 +179,17 @@ addBooksInBatch(booksArray)
 ## 🔧 **NEW BACKEND**
 
 ### Auth Middleware: `Server/middleware/auth.js`
+
 ```javascript
-verifyToken          // Verify Bearer token
-verifyRole(roles)    // Check user role
+verifyToken; // Verify Bearer token
+verifyRole(roles); // Check user role
 ```
 
 ### Upload Routes: `Server/routes/upload.js`
+
 ```javascript
-GET /api/upload-signature  // Get signed upload signature
-POST /api/upload           // Upload with verification
+GET / api / upload - signature; // Get signed upload signature
+POST / api / upload; // Upload with verification
 ```
 
 ---
@@ -189,13 +198,15 @@ POST /api/upload           // Upload with verification
 
 File: `.env.example`
 
-**Frontend Variables** (REACT_APP_*):
+**Frontend Variables** (REACT*APP*\*):
+
 - Firebase credentials
 - Cloudinary cloud name
 - Feature flags
 - API configuration
 
 **Backend Variables**:
+
 - Cloudinary credentials (secret)
 - Firebase credentials
 - Server port
@@ -205,28 +216,28 @@ File: `.env.example`
 
 ## 📊 **FILE SUMMARY TABLE**
 
-| File | Type | Purpose | Priority |
-|------|------|---------|----------|
-| firestore.rules | 🔒 Security | Database access control | CRITICAL |
-| src/constants/index.js | 📚 Data | Unified values | HIGH |
-| src/utils/logger.js | 🛠️ Utility | Controlled logging | MEDIUM |
-| src/utils/transactions.js | 🛠️ Utility | Firestore transactions | HIGH |
-| src/hooks/useSharedLogic.js | 🪝 Code | Shared logic | MEDIUM |
-| Server/middleware/auth.js | 🔐 Backend | Token verification | HIGH |
-| Server/routes/upload.js | 📤 Backend | Signed uploads | MEDIUM |
-| .env.example | ⚙️ Config | Environment setup | SETUP |
+| File                        | Type        | Purpose                 | Priority |
+| --------------------------- | ----------- | ----------------------- | -------- |
+| firestore.rules             | 🔒 Security | Database access control | CRITICAL |
+| src/constants/index.js      | 📚 Data     | Unified values          | HIGH     |
+| src/utils/logger.js         | 🛠️ Utility  | Controlled logging      | MEDIUM   |
+| src/utils/transactions.js   | 🛠️ Utility  | Firestore transactions  | HIGH     |
+| src/hooks/useSharedLogic.js | 🪝 Code     | Shared logic            | MEDIUM   |
+| Server/middleware/auth.js   | 🔐 Backend  | Token verification      | HIGH     |
+| Server/routes/upload.js     | 📤 Backend  | Signed uploads          | MEDIUM   |
+| .env.example                | ⚙️ Config   | Environment setup       | SETUP    |
 
 ---
 
 ## 📖 **DOCUMENTATION FILES**
 
-| File | Best For | Read Time |
-|------|----------|-----------|
-| QUICK_START.md | Getting started NOW | 5 min |
-| IMPLEMENTATION_CHECKLIST.md | Detailed step-by-step | 15 min |
-| SECURITY_GUIDE.md | Understanding security | 10 min |
-| PROJECT_IMPROVEMENTS.md | Full context | 20 min |
-| EXECUTIVE_SUMMARY.md | High-level overview | 10 min |
+| File                        | Best For               | Read Time |
+| --------------------------- | ---------------------- | --------- |
+| QUICK_START.md              | Getting started NOW    | 5 min     |
+| IMPLEMENTATION_CHECKLIST.md | Detailed step-by-step  | 15 min    |
+| SECURITY_GUIDE.md           | Understanding security | 10 min    |
+| PROJECT_IMPROVEMENTS.md     | Full context           | 20 min    |
+| EXECUTIVE_SUMMARY.md        | High-level overview    | 10 min    |
 
 ---
 
@@ -243,6 +254,7 @@ File: `.env.example`
 ## ✅ **VERIFICATION CHECKLIST**
 
 ### After Setup:
+
 - [ ] All files present in correct directories
 - [ ] No syntax errors in firestore.rules
 - [ ] Constants can be imported
@@ -251,6 +263,7 @@ File: `.env.example`
 - [ ] Backend middleware integrates
 
 ### After Implementation:
+
 - [ ] Firestore Rules deployed
 - [ ] console.log replaced with logger
 - [ ] Transactions added to operations
@@ -259,6 +272,7 @@ File: `.env.example`
 - [ ] Tests passing
 
 ### After Deployment:
+
 - [ ] sessionStorage changes don't bypass security
 - [ ] Firestore read costs reduced
 - [ ] No console errors
@@ -270,6 +284,7 @@ File: `.env.example`
 ## 🎯 **QUICK REFERENCE**
 
 **Use Constants Instead Of Hardcoded Values:**
+
 ```javascript
 import { ROLES, LOAN_STATUS } from "../constants";
 
@@ -281,6 +296,7 @@ import { ROLES, LOAN_STATUS } from "../constants";
 ```
 
 **Use Logger Instead Of console.log:**
+
 ```javascript
 import logger from "../utils/logger";
 
@@ -289,6 +305,7 @@ import logger from "../utils/logger";
 ```
 
 **Use Hooks Instead Of Repeating Firestore Code:**
+
 ```javascript
 import { useUserWishlist } from "../hooks/useSharedLogic";
 
@@ -297,6 +314,7 @@ import { useUserWishlist } from "../hooks/useSharedLogic";
 ```
 
 **Use Transactions For Multi-Doc Operations:**
+
 ```javascript
 import { approveLoan } from "../utils/transactions";
 
@@ -308,15 +326,15 @@ import { approveLoan } from "../utils/transactions";
 
 ## 📞 **STILL NEED TO DO**
 
-| Task | Status | Estimated Time |
-|------|--------|-----------------|
-| Optimize Firestore queries | ⏳ Ready to implement | 1.5 hours |
-| Replace console.log | ⏳ Ready to implement | 30 min |
-| Add transactions | ⏳ Ready to implement | 1 hour |
-| Integrate backend auth | ⏳ Ready to implement | 1 hour |
-| Split UserProfile | ⏳ Ready to implement | 2 hours |
-| Add error boundaries | ⏳ Ready to implement | 30 min |
-| Write tests | ⏳ Ready to implement | 2 hours |
+| Task                       | Status                | Estimated Time |
+| -------------------------- | --------------------- | -------------- |
+| Optimize Firestore queries | ⏳ Ready to implement | 1.5 hours      |
+| Replace console.log        | ⏳ Ready to implement | 30 min         |
+| Add transactions           | ⏳ Ready to implement | 1 hour         |
+| Integrate backend auth     | ⏳ Ready to implement | 1 hour         |
+| Split UserProfile          | ⏳ Ready to implement | 2 hours        |
+| Add error boundaries       | ⏳ Ready to implement | 30 min         |
+| Write tests                | ⏳ Ready to implement | 2 hours        |
 
 **Total Estimated**: 8-10 hours
 

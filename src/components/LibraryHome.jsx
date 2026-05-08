@@ -60,11 +60,19 @@ function LibraryHome() {
   }, []);
 
   useEffect(() => {
-    if (!uid) { setWishlistMap({}); return; }
-    const q = firestoreQuery(collection(db, "wishlists"), where("userId", "==", uid));
+    if (!uid) {
+      setWishlistMap({});
+      return;
+    }
+    const q = firestoreQuery(
+      collection(db, "wishlists"),
+      where("userId", "==", uid),
+    );
     const unsub = onSnapshot(q, (snap) => {
       const map = {};
-      snap.forEach((d) => { map[d.data().bookId] = d.id; });
+      snap.forEach((d) => {
+        map[d.data().bookId] = d.id;
+      });
       setWishlistMap(map);
     });
     return () => unsub();
@@ -109,11 +117,11 @@ function LibraryHome() {
 
   const featuredBooks = query.trim()
     ? allBooks.filter(
-      (b) =>
-        b.title?.toLowerCase().includes(query.toLowerCase()) ||
-        b.author?.toLowerCase().includes(query.toLowerCase()) ||
-        b.isbn?.toLowerCase().includes(query.toLowerCase()),
-    )
+        (b) =>
+          b.title?.toLowerCase().includes(query.toLowerCase()) ||
+          b.author?.toLowerCase().includes(query.toLowerCase()) ||
+          b.isbn?.toLowerCase().includes(query.toLowerCase()),
+      )
     : allBooks;
 
   const toggleWishlist = async (book) => {
@@ -127,7 +135,9 @@ function LibraryHome() {
         confirmButtonColor: "#633a19",
         showCancelButton: true,
         cancelButtonText: "Cancel",
-      }).then((r) => { if (r.isConfirmed) navigate("/login"); });
+      }).then((r) => {
+        if (r.isConfirmed) navigate("/login");
+      });
       return;
     }
     setWishlistLoading((p) => ({ ...p, [book.id]: true }));
@@ -146,8 +156,11 @@ function LibraryHome() {
           addedAt: serverTimestamp(),
         });
       }
-    } catch (err) { console.error(err); }
-    finally { setWishlistLoading((p) => ({ ...p, [book.id]: false })); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWishlistLoading((p) => ({ ...p, [book.id]: false }));
+    }
   };
 
   const handleSearch = (e) => e.preventDefault();

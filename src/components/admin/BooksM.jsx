@@ -78,26 +78,26 @@ function BooksM() {
         return;
       }
 
-     const imageFormData = new FormData();
-     imageFormData.append("file", image);
-     imageFormData.append("upload_preset", "library-system");
+      const imageFormData = new FormData();
+      imageFormData.append("file", image);
+      imageFormData.append("upload_preset", "library-system");
 
-     const res = await fetch(
-       "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
-       {
-         method: "POST",
-         body: imageFormData,
-       },
-     );
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
+        {
+          method: "POST",
+          body: imageFormData,
+        },
+      );
 
-     const data = await res.json();
-     logger.log("BooksM", data);
+      const data = await res.json();
+      logger.log("BooksM", data);
 
-     if (!res.ok || !data.secure_url) {
-       throw new Error(data.error?.message || "Image upload failed");
-     }
+      if (!res.ok || !data.secure_url) {
+        throw new Error(data.error?.message || "Image upload failed");
+      }
 
-     const coverUrl = data.secure_url;
+      const coverUrl = data.secure_url;
 
       await addDoc(booksCollection, {
         title,
@@ -208,7 +208,15 @@ function BooksM() {
           className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
         >
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "90%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" }}>
+          <div
+            className="bg-white p-4 rounded-4 shadow"
+            style={{
+              width: "90%",
+              maxWidth: "600px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+          >
             <h1 className="fw-bold brown border-bottom pb-3 mb-3">
               Add New Book
             </h1>
@@ -332,7 +340,15 @@ function BooksM() {
           className="position-fixed top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
         >
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "90%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" }}>
+          <div
+            className="bg-white p-4 rounded-4 shadow"
+            style={{
+              width: "90%",
+              maxWidth: "600px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+          >
             <h1 className="fw-bold brown border-bottom pb-3 mb-3">Edit Book</h1>
 
             <form onSubmit={handleEditSave}>
@@ -440,7 +456,10 @@ function BooksM() {
               ))}
             </div>
 
-            <div className="position-relative w-100" style={{ maxWidth: "320px" }}>
+            <div
+              className="position-relative w-100"
+              style={{ maxWidth: "320px" }}
+            >
               <input
                 type="text"
                 className="form-control pe-5"
@@ -480,30 +499,59 @@ function BooksM() {
                     </tr>
                   </thead>
                   <tbody>
-                {filteredBooks.map((book) => (
-                    <tr key={book.id} className="text-center align-middle">
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          <img src={book.coverUrl} alt={book.title} style={{ width: "40px", borderRadius: 4 }}
-                            onError={e=>{e.target.onerror=null;e.target.src="https://placehold.co/40x55?text=📖";}}/>
-                          <span className="fw-semibold text-start" style={{ fontSize: 13 }}>{book.title}</span>
-                        </div>
-                      </td>
-                      <td style={{ fontSize: 13 }}>{book.author}</td>
-                      <td className="d-none d-md-table-cell" style={{ fontSize: 13 }}>{book.category}</td>
-                      <td className="d-none d-sm-table-cell" style={{ fontSize: 13 }}>{book.status || "—"}</td>
-                      <td>
-                        <div className="d-flex justify-content-center gap-3">
-                          <button onClick={() => openEditModal(book)} className="bg-transparent border-0">
-                            <i className="fa-solid fa-pen text-primary"></i>
-                          </button>
-                          <button onClick={() => deleteBook(book)} className="bg-transparent border-0">
-                            <i className="fa-solid fa-trash-can text-danger"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                ))}
+                    {filteredBooks.map((book) => (
+                      <tr key={book.id} className="text-center align-middle">
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            <img
+                              src={book.coverUrl}
+                              alt={book.title}
+                              style={{ width: "40px", borderRadius: 4 }}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src =
+                                  "https://placehold.co/40x55?text=📖";
+                              }}
+                            />
+                            <span
+                              className="fw-semibold text-start"
+                              style={{ fontSize: 13 }}
+                            >
+                              {book.title}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ fontSize: 13 }}>{book.author}</td>
+                        <td
+                          className="d-none d-md-table-cell"
+                          style={{ fontSize: 13 }}
+                        >
+                          {book.category}
+                        </td>
+                        <td
+                          className="d-none d-sm-table-cell"
+                          style={{ fontSize: 13 }}
+                        >
+                          {book.status || "—"}
+                        </td>
+                        <td>
+                          <div className="d-flex justify-content-center gap-3">
+                            <button
+                              onClick={() => openEditModal(book)}
+                              className="bg-transparent border-0"
+                            >
+                              <i className="fa-solid fa-pen text-primary"></i>
+                            </button>
+                            <button
+                              onClick={() => deleteBook(book)}
+                              className="bg-transparent border-0"
+                            >
+                              <i className="fa-solid fa-trash-can text-danger"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

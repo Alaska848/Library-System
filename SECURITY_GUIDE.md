@@ -3,11 +3,13 @@
 ## تم إضافته وإصلاحه:
 
 ### 1. **Fixed Routing Bug** ✅
+
 - **المشكلة**: `allowedRoles` في App.js بينما ProtectedRoute تتوقع `allowedRole`
 - **الحل**: تحديث ProtectedRoute ليدعم كلاً من الصيغتين
 - **الملف**: [src/components/ProtectedRoute.jsx](../src/components/ProtectedRoute.jsx)
 
 ### 2. **Firestore Security Rules** ✅
+
 - **الملف**: [firestore.rules](../firestore.rules)
 - **المحتوى**:
   - ✅ Role-based access control (RBAC)
@@ -16,6 +18,7 @@
   - ✅ Owner-based access
 
 **للتفعيل**:
+
 ```bash
 # تثبيت Firebase CLI
 npm install -g firebase-tools
@@ -28,6 +31,7 @@ firebase deploy --only firestore:rules
 ```
 
 ### 3. **Unified Constants/Enums** ✅
+
 - **الملف**: [src/constants/index.js](../src/constants/index.js)
 - **المحتوى**:
   - Roles: ADMIN, USER, DOCTOR
@@ -37,19 +41,25 @@ firebase deploy --only firestore:rules
   - Colors mapping
 
 **الاستخدام**:
+
 ```javascript
 import { ROLES, LOAN_STATUS, ERROR_MESSAGES } from "../constants";
 
 // بدلاً من:
-if (role === "admin") { }
-if (status === "borrowed") { }
+if (role === "admin") {
+}
+if (status === "borrowed") {
+}
 
 // استخدم:
-if (role === ROLES.ADMIN) { }
-if (status === LOAN_STATUS.BORROWED) { }
+if (role === ROLES.ADMIN) {
+}
+if (status === LOAN_STATUS.BORROWED) {
+}
 ```
 
 ### 4. **Logger Utility** ✅
+
 - **الملف**: [src/utils/logger.js](../src/utils/logger.js)
 - **الميزات**:
   - Development mode: logs كاملة
@@ -57,6 +67,7 @@ if (status === LOAN_STATUS.BORROWED) { }
   - Prevents data leaks
 
 **الاستخدام**:
+
 ```javascript
 import logger from "../utils/logger";
 
@@ -66,6 +77,7 @@ logger.error("API", error);
 ```
 
 ### 5. **Shared Business Logic Hooks** ✅
+
 - **الملف**: [src/hooks/useSharedLogic.js](../src/hooks/useSharedLogic.js)
 - **الـ Hooks المتاحة**:
   - `useUserWishlist()` - إدارة قائمة الرغبات
@@ -75,6 +87,7 @@ logger.error("API", error);
   - `useAuthCheck()` - التحقق من الصلاحيات
 
 **الاستخدام**:
+
 ```javascript
 import { useUserWishlist, useCreateLoan } from "../hooks/useSharedLogic";
 
@@ -87,6 +100,7 @@ function MyComponent() {
 ```
 
 ### 6. **Backend Auth Middleware** ✅
+
 - **الملف**: [Server/middleware/auth.js](../Server/middleware/auth.js)
 - **الميزات**:
   - Bearer Token verification
@@ -94,6 +108,7 @@ function MyComponent() {
   - Custom Claims support
 
 ### 7. **Signed Upload Endpoint** ✅
+
 - **الملف**: [Server/routes/upload.js](../Server/routes/upload.js)
 - **الميزات**:
   - Signed uploads بدلاً من unsigned
@@ -105,18 +120,21 @@ function MyComponent() {
 ## 📋 الخطوات المتبقية (TODO):
 
 ### High Priority
+
 - [ ] تطبيق Transactions على العمليات المتعددة (BorrowingLog, FacultyRequests)
 - [ ] تحسين onSnapshot queries (إضافة pagination و filtering)
 - [ ] حذف console.log من الملفات الحالية
 - [ ] إضافة اختبارات للـ guards والـ workflows
 
 ### Medium Priority
+
 - [ ] تقسيم UserProfile.jsx إلى modules
 - [ ] توحيد الـ status values في القاعدة البيانات
 - [ ] استخراج shared components
 - [ ] إضافة error boundaries
 
 ### Low Priority
+
 - [ ] حذف السكريبت Chatbase من index.html (أو إضافة consent)
 - [ ] تنظيف Server/uploads directory
 - [ ] إضافة performance monitoring
@@ -140,6 +158,7 @@ function MyComponent() {
 ## 📝 ملاحظات مهمة
 
 1. **Firebase Custom Claims**: لتفعيل الـ Custom Claims بشكل كامل:
+
    ```bash
    # استخدم Firebase Admin SDK لتعيين role
    admin.auth().setCustomUserClaims(uid, { role: 'admin' })
@@ -152,6 +171,7 @@ function MyComponent() {
    - `FIREBASE_SERVICE_ACCOUNT_KEY` (في Backend)
 
 3. **Database Migration**: عند التحويل إلى الـ Constants الجديدة:
+
    ```javascript
    // استخدم Cloud Functions لـ Migration
    // أو قم بـ Manual update للـ Collections القديمة
@@ -167,6 +187,7 @@ function MyComponent() {
 ## 🚀 Next Steps
 
 1. **تطبيق الـ Transactions**:
+
    ```javascript
    // في BorrowingLog وFacultyRequests
    await runTransaction(db, async (transaction) => {
@@ -175,12 +196,13 @@ function MyComponent() {
    ```
 
 2. **تحسين Queries**:
+
    ```javascript
    // بدلاً من:
    onSnapshot(collection(db, "loans"), ...)
-   
+
    // استخدم:
-   const q = query(collection(db, "loans"), 
+   const q = query(collection(db, "loans"),
      where("userId", "==", uid),
      limit(10)
    );

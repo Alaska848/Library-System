@@ -898,7 +898,10 @@ export default function BorrowingLog() {
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  logger.log("BorrowingLog", `Suspend button: ${loan.id}`);
+                                  logger.log(
+                                    "BorrowingLog",
+                                    `Suspend button: ${loan.id}`,
+                                  );
                                   handleSuspendStudent(loan);
                                 }}
                               >
