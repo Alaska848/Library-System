@@ -80,13 +80,18 @@ function BooksM() {
       const imageFormData = new FormData();
       imageFormData.append("image", image);
 
-      const res = await fetch("http://localhost:5000/upload", {
-        method: "POST",
-        body: imageFormData,
-      });
+      imageFormData.append("upload_preset", "library-system");
+
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
+        {
+          method: "POST",
+          body: imageFormData,
+        },
+      );
 
       const data = await res.json();
-      const coverUrl = data.imageUrl;
+      const coverUrl = data.secure_url;
 
       await addDoc(booksCollection, {
         title,
@@ -112,7 +117,7 @@ function BooksM() {
 
   const deleteBook = async (book) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${book.title}"?`
+      `Are you sure you want to delete "${book.title}"?`,
     );
     if (!confirmed) return;
 
@@ -159,11 +164,20 @@ function BooksM() {
   };
 
   const categories = [
-                "Philosophy", "History", "Science", "Mathematics",
-                "Computer Science", "Literature", "Engineering",
-                "Business", "Psychology", "Art", "Medicine",
-                "Economics", "Law"
-                ];
+    "Philosophy",
+    "History",
+    "Science",
+    "Mathematics",
+    "Computer Science",
+    "Literature",
+    "Engineering",
+    "Business",
+    "Psychology",
+    "Art",
+    "Medicine",
+    "Economics",
+    "Law",
+  ];
 
   return (
     <div className="my-5 pt-5">
@@ -196,7 +210,9 @@ function BooksM() {
             <form onSubmit={handleAddBook}>
               <div className="row">
                 <div className="col-md-6">
-                  <label htmlFor="title" className="brown">Book Title</label>
+                  <label htmlFor="title" className="brown">
+                    Book Title
+                  </label>
                   <input
                     id="title"
                     type="text"
@@ -207,7 +223,9 @@ function BooksM() {
                   />
                 </div>
                 <div className="col-md-6">
-                  <label htmlFor="author" className="brown">Author</label>
+                  <label htmlFor="author" className="brown">
+                    Author
+                  </label>
                   <input
                     id="author"
                     type="text"
@@ -221,7 +239,9 @@ function BooksM() {
 
               <div className="row">
                 <div className="col-md-6">
-                  <label htmlFor="isbn" className="brown">ISBN Number</label>
+                  <label htmlFor="isbn" className="brown">
+                    ISBN Number
+                  </label>
                   <input
                     id="isbn"
                     type="text"
@@ -231,11 +251,11 @@ function BooksM() {
                     required
                   />
                 </div>
-                
 
-              
                 <div className="col-md-6">
-                  <label htmlFor="category" className="brown">Category</label>
+                  <label htmlFor="category" className="brown">
+                    Category
+                  </label>
                   <select
                     id="category"
                     name="category"
@@ -243,7 +263,9 @@ function BooksM() {
                     required
                     defaultValue=""
                   >
-                    <option value="" disabled>Select a category</option>
+                    <option value="" disabled>
+                      Select a category
+                    </option>
                     {categories.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
@@ -253,7 +275,9 @@ function BooksM() {
                 </div>
               </div>
 
-              <label htmlFor="des" className="brown">Description</label>
+              <label htmlFor="des" className="brown">
+                Description
+              </label>
               <textarea
                 id="des"
                 name="Description"
@@ -262,7 +286,9 @@ function BooksM() {
                 required
               />
 
-              <label htmlFor="img" className="brown">Book Cover Image</label>
+              <label htmlFor="img" className="brown">
+                Book Cover Image
+              </label>
               <input
                 onChange={(e) => setImage(e.target.files[0])}
                 id="img"
@@ -301,9 +327,7 @@ function BooksM() {
           style={{ backgroundColor: "rgba(57, 34, 10, 0.6)", zIndex: 1000 }}
         >
           <div className="bg-white p-5 rounded-4 shadow w-75">
-            <h1 className="fw-bold brown border-bottom pb-3 mb-3">
-              Edit Book
-            </h1>
+            <h1 className="fw-bold brown border-bottom pb-3 mb-3">Edit Book</h1>
 
             <form onSubmit={handleEditSave}>
               <div className="row">

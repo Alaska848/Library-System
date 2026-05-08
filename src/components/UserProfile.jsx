@@ -1399,17 +1399,18 @@ function UserProfile() {
       const imageFormData = new FormData();
       imageFormData.append("image", file);
 
-      const res = await fetch("http://localhost:5000/upload", {
-        method: "POST",
-        body: imageFormData,
-      });
+      imageFormData.append("upload_preset", "library-system");
 
-      if (!res.ok) {
-        throw new Error("Image upload failed");
-      }
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/didvm5sia/image/upload",
+        {
+          method: "POST",
+          body: imageFormData,
+        },
+      );
 
       const data = await res.json();
-      const url = data.imageUrl;
+      const url = data.secure_url;
 
       if (!url) {
         throw new Error("Upload server did not return imageUrl");
