@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { auth, db } from "./firebase";
+import logger from "../utils/logger";
 import {
   onAuthStateChanged,
   updateEmail,
@@ -1505,7 +1506,7 @@ function UserProfile() {
       );
 
       const data = await res.json();
-      console.log("Cloudinary profile response:", data);
+      logger.log("UserProfile", data);
 
       if (!res.ok || !data.secure_url) {
         throw new Error(data.error?.message || "Image upload failed");

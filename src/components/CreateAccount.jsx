@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import logger from "../utils/logger";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import Swal from "sweetalert2";
@@ -89,7 +90,7 @@ function CreateAccount() {
 
       navigate("/login");
     } catch (error) {
-      console.log(error);
+      logger.error("CreateAccount", error);
 
       toast.error(error.message);
 
