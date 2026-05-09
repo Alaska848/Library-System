@@ -405,10 +405,10 @@ function Navbar() {
                 {showNotifs && (
                   <div
                     style={{
-                      position: "absolute",
-                      top: "calc(100% + 10px)",
-                      right: 0,
-                      width: 320,
+                      position: "fixed",
+                      top: 64,
+                      right: 12,
+                      width: "min(320px, calc(100vw - 24px))",
                       background: "#fff",
                       borderRadius: 14,
                       boxShadow: "0 12px 36px rgba(0,0,0,0.15)",

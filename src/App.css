@@ -180,3 +180,214 @@ label {
 .view-collection:active{
     background-color:rgba(99,58,25,0.2);
 }
+
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* ── 2. NAVBAR ────────────────────────────────────────────── */
+
+
+.navbar {
+  width: 100%;
+  max-width: 100vw;
+  overflow: visible; /* lazim visible عشان الـ dropdowns تطلع */
+}
+
+
+@media (max-width: 768px) {
+  /* Notification panel */
+  div[style*="position: absolute"][style*="width: 320px"] {
+    width: min(320px, calc(100vw - 24px)) !important;
+    right: -60px !important; 
+  }
+
+  /* Search dropdown في الـ navbar */
+  .navbar-search-dropdown {
+    position: fixed !important;
+    top: 60px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    z-index: 9999;
+  }
+}
+
+/* ── 3. NAVBAR SEARCH DROPDOWN ────────────────────────────── */
+.navbar-search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  padding: 12px;
+  z-index: 3000;
+}
+
+.navbar-search-field {
+  border: 1.5px solid #e5e7eb !important;
+  background: #fff !important;
+  color: #1f2937 !important;
+}
+
+.navbar-search-field::placeholder {
+  color: #9ca3af !important;
+}
+
+/* ── 4. HERO SEARCH BAR (LibraryHome) ─────────────────────── */
+.library-search {
+  width: 100%;
+  max-width: 880px;
+}
+
+@media (max-width: 576px) {
+  .library-search {
+    flex-direction: column !important;
+    border-radius: 16px !important;
+    padding: 8px !important;
+    gap: 8px;
+  }
+
+  .library-search input {
+    width: 100%;
+    border-radius: 10px !important;
+  }
+
+  .library-search button {
+    width: 100%;
+    border-radius: 10px !important;
+  }
+}
+
+/* ── 5. LIBRARY HERO ───────────────────────────────────────── */
+.library-hero {
+  min-height: 300px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+@media (max-width: 576px) {
+  .library-hero h1 {
+    font-size: 1.6rem !important;
+  }
+
+  .library-hero p {
+    font-size: 0.9rem;
+  }
+}
+
+/* ── 6. USER PROFILE PAGE ──────────────────────────────────── */
+
+
+@media (max-width: 768px) {
+  div[style*="position: sticky"][style*="top: 82px"] {
+    position: relative !important;
+    top: auto !important;
+  }
+}
+
+
+@media (max-width: 576px) {
+  /* SettingsPanel */
+  div[style*="padding: \"28px 32px\""],
+  div[style*='padding: "28px 32px"'] {
+    padding: 16px !important;
+  }
+
+  /* Tab buttons في settings */
+  div[style*="width: \"fit-content\""] {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+}
+
+/* ── 7. CARDS GRID ─────────────────────────────────────────── */
+
+
+.card {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* ── 8. CONTAINER OVERFLOW FIX ─────────────────────────────── */
+.container,
+.container-fluid {
+  overflow-x: hidden;
+}
+
+/* ── 9. CATALOG: Category buttons scroll ────────────────────── */
+@media (max-width: 576px) {
+  .mb-4.d-flex.gap-2.flex-wrap {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mb-4.d-flex.gap-2.flex-wrap::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── 10. MODAL ─────────────────────────────────────────────── */
+@media (max-width: 576px) {
+  .modal-dialog {
+    margin: 12px !important;
+  }
+
+  /* Borrow modal في LibraryHome */
+  div[style*="maxWidth: 520"] {
+    max-width: calc(100vw - 24px) !important;
+    padding: 20px 16px !important;
+  }
+}
+
+/* ── 11. SUBMIT BOOK FORM ───────────────────────────────────── */
+@media (max-width: 576px) {
+  .container.mt-5.py-5 .bg-white {
+    padding: 16px !important;
+  }
+}
+
+/* ── 12. FOOTER ─────────────────────────────────────────────── */
+@media (max-width: 576px) {
+  .bg-brown.py-5 .container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+
+@media (max-width: 576px) {
+  /* profile header card */
+  .d-flex.align-items-start.gap-4.flex-wrap {
+    flex-direction: column;
+    align-items: center !important;
+    text-align: center;
+  }
+
+  /* InfoRow grid */
+  .row.g-3 .col-12.col-sm-6 {
+    text-align: left;
+  }
+}
+
+/* ── 14. TOAST NOTIFICATION ─────────────────────────────────── */
+@media (max-width: 576px) {
+  
+  div[style*="bottom: 24"][style*="right: 24"] {
+    right: 12px !important;
+    left: 12px !important;
+    max-width: calc(100vw - 24px) !important;
+    min-width: unset !important;
+  }
+}
